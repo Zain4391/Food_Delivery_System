@@ -35,6 +35,7 @@ export class DriverStrategy extends PassportStrategy(Strategy, 'jwt-driver') {
             id: driver.id,
             email: driver.email,
             name: driver.name,
+            role: driver.role,
             userType: 'driver'
         }
     }

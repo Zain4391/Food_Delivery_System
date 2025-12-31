@@ -1,6 +1,6 @@
 import { Order } from "../../orders/entities/order.entity";
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
-
+import { ROLES } from "../../common/enums/roles.enum";
 
 @Entity("customers")
 export class Customer {
@@ -26,6 +26,13 @@ export class Customer {
     // ADD Relation: One Customer has Many Orders
     @OneToMany(() => Order, (order) => order.customer)
     orders: Order[]
+
+    @Column({
+        type: 'enum',
+        enum: ROLES,
+        default: ROLES.CUSTOMER
+    })
+    role: ROLES;    
 
     @CreateDateColumn()
     created_at: Date;

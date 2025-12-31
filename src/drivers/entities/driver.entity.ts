@@ -1,3 +1,4 @@
+import { ROLES } from "../../common/enums/roles.enum";
 import { Order } from "../../orders/entities/order.entity";
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
@@ -41,6 +42,13 @@ export class DeliveryDriver {
     // ADD Relation: One Rider can Have many Orders
     @OneToMany(() => Order, (order) => order.driver)
     orders: Order[];
+
+    @Column({
+        type: 'enum',
+        enum: ROLES,
+        default: ROLES.DRIVER 
+    })
+    role: ROLES; 
     
     @CreateDateColumn()
     created_at: Date;

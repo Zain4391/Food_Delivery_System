@@ -36,6 +36,7 @@ export class JwtCustomerStrategy extends PassportStrategy(Strategy, 'jwt-custome
             id: customer.id,
             email: customer.email,
             name: customer.name,
+            role: customer.role,
             userType: 'customer'
         }
     }

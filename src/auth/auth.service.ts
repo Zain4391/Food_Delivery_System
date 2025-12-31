@@ -88,6 +88,7 @@ export class AuthService {
       sub: customer.id,
       email: customer.email,
       name: customer.name,
+      role: customer.role,
       userType: 'customer'
     };
 
@@ -128,6 +129,7 @@ export class AuthService {
       sub: driver.id,
       email: driver.email,
       name: driver.name,
+      role: driver.role,
       userType: 'driver'
     };
 
