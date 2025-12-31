@@ -9,5 +9,6 @@ import { DeliveryDriver } from '../drivers/entities/driver.entity';
   imports: [TypeOrmModule.forFeature([Customer, DeliveryDriver])],
   controllers: [AuthController],
   providers: [AuthService],
+  exports: [AuthService]
 })
 export class AuthModule {}

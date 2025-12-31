@@ -1,42 +1,38 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { Body, ClassSerializerInterceptor, Controller, HttpCode, HttpStatus, Post, UseInterceptors } from "@nestjs/common";
+import { AuthService } from "./auth.service";
+import { RegisterCustomerDTO } from "./dto/register-customer-dto";
+import { CustomerResponseDTO } from "./dto/customer-response-dto";
+import { RegisterDriverDTO } from "./dto/register-driver-dto";
+import { DriverResponseDTO } from "./dto/driver-response-dto";
+import { LoginDTO } from "./dto/login=dto";
+import { AuthResponseDTO } from "./dto/auth-response-dto";
 
-@Controller('auth')
+
+@Controller("api/auth")
+@UseInterceptors(ClassSerializerInterceptor)
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+  constructor(private authService: AuthService) {}
+
+  @Post('customer/register')
+  async registerCustomer(@Body() registerDto: RegisterCustomerDTO): Promise<CustomerResponseDTO> {
+    return this.authService.registerCustomer(registerDto);
   }
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
+  @Post('driver/register')
+  async registerDriver(@Body() registerDto: RegisterDriverDTO): Promise<DriverResponseDTO> {
+    return this.authService.registerDriver(registerDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
+  @HttpCode(HttpStatus.OK)
+  @Post('customer/login')
+  async loginCustomer(@Body() loginDto: LoginDTO): Promise<AuthResponseDTO> {
+    return this.authService.customerLogin(loginDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+  @HttpCode(HttpStatus.OK)
+  @Post('driver/login')
+  async loginDriver(@Body() loginDto: LoginDTO): Promise<AuthResponseDTO> {
+    return this.authService.riderLogin(loginDto);
   }
 }
