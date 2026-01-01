@@ -33,7 +33,7 @@ export class DeliveryDriver {
     })
     vehicle_type: VEHICLE_TYPE
 
-    @Column({ nullable: true, length: 255 })
+    @Column({ nullable: true, length: 255, })
     profile_image_url: string;
 
     @Column({ default: true })

@@ -15,6 +15,7 @@ import { LoginDTO } from "./dto/login=dto";
 import { AuthResponseDTO } from "./dto/auth-response-dto";
 import type { JwtPayload } from "./types/auth.types";
 import { jwtConstants } from "src/config/jwt.constants";
+import { ROLES } from "src/common/enums/roles.enum";
 
 
 @Injectable()
@@ -38,10 +39,14 @@ export class AuthService {
       throw new CustomerAlreadyExistsException(registerDto.email);
     }
 
-    const hashedPassword = (await bcrypt.hash(registerDto.password, 10)) as string;
+    const role: ROLES = registerDto.role || ROLES.CUSTOMER;
+
+    const hashedPassword = (await bcrypt.hash(registerDto.password, 10));
     const customer = this.customerRepository.create({
       ...registerDto,
-      password: hashedPassword
+      password: hashedPassword,
+      role: role,
+      created_at: new Date()
     });
 
     const savedCustomer = await this.customerRepository.save(customer);
@@ -58,10 +63,12 @@ export class AuthService {
       throw new DriverAlreadyExistsException(registerDto.email);
     }
 
-    const hashedPassword = (await bcrypt.hash(registerDto.password, 10)) as string;
+
+    const hashedPassword = (await bcrypt.hash(registerDto.password, 10));
     const driver = this.driverRepository.create({
       ...registerDto,
-      password: hashedPassword
+      password: hashedPassword,
+      created_at: new Date()
     });
 
     const savedDriver = await this.driverRepository.save(driver);
@@ -77,7 +84,7 @@ export class AuthService {
       throw new CustomerNotFoundException(loginDto.email);
     }
 
-    const isValid = (await bcrypt.compare(loginDto.password, customer.password)) as boolean;
+    const isValid = (await bcrypt.compare(loginDto.password, customer.password));
 
     if (!isValid) {
       throw new UnauthorizedException("Invalid customer credentials");
@@ -119,7 +126,7 @@ export class AuthService {
       throw new DriverNotFoundException(loginDto.email);
     }
 
-    const isValid = (await bcrypt.compare(loginDto.password, driver.password)) as boolean;
+    const isValid = (await bcrypt.compare(loginDto.password, driver.password));
 
     if (!isValid) {
       throw new UnauthorizedException("Invalid driver credentials");

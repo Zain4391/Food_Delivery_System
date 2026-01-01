@@ -18,3 +18,27 @@ export class CustomerAlreadyExistsException extends CustomBaseException {
     super(`Customer with email ${email} already exists`, HttpStatus.CONFLICT);
   }
 }
+
+export class CustomerEmailNotFoundException extends CustomBaseException {
+  constructor(email: string) {
+    super(`Customer with ID ${email} not found`, HttpStatus.NOT_FOUND);
+  }
+}
+
+export class PasswordsNotMatchException extends CustomBaseException {
+  constructor() {
+    super('New password and confirm password do not match', HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class FileUploadException extends CustomBaseException {
+  constructor(message: string) {
+    super(`File upload failed: ${message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
+export class InvalidFileTypeException extends CustomBaseException {
+  constructor(allowedTypes: string[]) {
+    super(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`, HttpStatus.BAD_REQUEST);
+  }
+}

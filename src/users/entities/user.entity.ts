@@ -17,7 +17,7 @@ export class Customer {
     @Column()
     password: string;
 
-    @Column({ unique: true, length: 255 })
+    @Column({ unique: true, length: 255, nullable: true })
     profile_image_url: string;
 
     @Column({ length: 255 })
