@@ -184,7 +184,7 @@ export class CustomerService {
 
         // Validate file type
         const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        const mimeType = file.mimetype as string;
+        const mimeType = file.mimetype;
         if (!allowedMimeTypes.includes(mimeType)) {
             throw new InvalidFileTypeException(allowedMimeTypes);
         }
@@ -202,7 +202,7 @@ export class CustomerService {
 
             // Upload new image to Supabase Storage
             const fileName = `${id}-${Date.now()}-${file.originalname.replace(/\s/g, '-')}`;
-            const fileBuffer = file.buffer as Buffer;
+            const fileBuffer = file.buffer;
             
             const { error: uploadError } = await supabaseClient.storage
                 .from('profile-banner-images')

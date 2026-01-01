@@ -3,6 +3,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { Customer } from "./entities/user.entity";
 import { CustomerService } from "./user.service";
 import { OrdersModule } from "src/orders/orders.module";
+import { CustomerController } from "./user.controller";
 
 @Module({
     imports: [
@@ -11,7 +12,7 @@ import { OrdersModule } from "src/orders/orders.module";
         // ADD RabbitMQ
     ],
     providers: [CustomerService], // Nest's equivalent of Bean 
-    controllers: [],
+    controllers: [CustomerController],
     exports: [CustomerService] // ervices which others can inject
 })
 export class CustomersModule {}
