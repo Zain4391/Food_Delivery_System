@@ -13,13 +13,18 @@ import { ForgotPasswordDTO } from "./dtos/forgot-password.dto";
 import { UpdatePasswordDTO } from "./dtos/update-password.dto";
 import { InvalidCredentialsException } from "src/common/exceptions/auth.exceptions";
 import { supabaseClient } from "src/config/supabase.config";
+import { OrderService } from "src/orders/order.service";
+import { OrderPaginationDTO } from "src/orders/dto/order-pagination.dto";
+import { OrderResponseDTO } from "src/orders/dto/order-response.dto";
+import { OrderStatus } from "src/orders/entities/order.entity";
 
 @Injectable()
 export class DriverService {
 
     constructor(
         @InjectRepository(DeliveryDriver)
-        private driverRepository: Repository<DeliveryDriver> 
+        private driverRepository: Repository<DeliveryDriver>,
+        private orderService: OrderService
     ) {}
 
     async findAll(query: DriverPaginationDTO): Promise<Pagination<DriverResponseDTO>> {
@@ -81,8 +86,48 @@ export class DriverService {
         return new DriverResponseDTO(driver);
     }
 
-    // TODO: All Orders Delivered by the driver
-    // TODO: All orders pedning/the driver has.
+    async findDeliveredOrders(driverId: string, query: OrderPaginationDTO): Promise<Pagination<OrderResponseDTO>> {
+        
+        const driver = await this.driverRepository.findOne({
+            where: { id: driverId }
+        });
+
+        if (!driver) {
+            throw new DriverNotFoundException(driverId);
+        }
+
+        // Set status filter to DELIVERED
+        query.status = OrderStatus.DELIVERED;
+        return this.orderService.findByDriver(driverId, query);
+    }
+
+    async findPendingOrders(driverId: string, query: OrderPaginationDTO): Promise<Pagination<OrderResponseDTO>> {
+        
+        const driver = await this.driverRepository.findOne({
+            where: { id: driverId }
+        });
+
+        if (!driver) {
+            throw new DriverNotFoundException(driverId);
+        }
+
+        // Set status filter to PICKED_UP (orders in transit)
+        query.status = OrderStatus.PICKED_UP;
+        return this.orderService.findByDriver(driverId, query);
+    }
+
+    async findAllDriverOrders(driverId: string, query: OrderPaginationDTO): Promise<Pagination<OrderResponseDTO>> {
+        
+        const driver = await this.driverRepository.findOne({
+            where: { id: driverId }
+        });
+
+        if (!driver) {
+            throw new DriverNotFoundException(driverId);
+        }
+
+        return this.orderService.findByDriver(driverId, query);
+    }
 
     async update(updateDto: UpdateDriverDTO, id: string): Promise<DriverResponseDTO> {
 

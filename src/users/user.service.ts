@@ -13,13 +13,17 @@ import { ForgotPasswordDTO } from "./dtos/forgot-password.dto";
 import { UpdatePasswordDTO } from "./dtos/update-password.dto";
 import { InvalidCredentialsException } from "src/common/exceptions/auth.exceptions";
 import { supabaseClient } from "src/config/supabase.config";
+import { OrderService } from "src/orders/order.service";
+import { OrderPaginationDTO } from "src/orders/dto/order-pagination.dto";
+import { OrderResponseDTO } from "src/orders/dto/order-response.dto";
 
 @Injectable()
 export class CustomerService {
 
     constructor(
         @InjectRepository(Customer)
-        private customerRepository: Repository<Customer>
+        private customerRepository: Repository<Customer>,
+        private orderService: OrderService
     ) {}
 
     async findAll(query: CustomerPaginationDTO): Promise<Pagination<CustomerResponseDTO>> {
@@ -80,8 +84,19 @@ export class CustomerService {
 
         return new CustomerResponseDTO(customer);
     }
+    
+    async findUserOrders(customerId: string, query: OrderPaginationDTO): Promise<Pagination<OrderResponseDTO>> {
+        // Validate customer exists
+        const customer = await this.customerRepository.findOne({
+            where: { id: customerId }
+        });
 
-    // TODO: ADD FindUserOrders : Paginated
+        if (!customer) {
+            throw new CustomerNotFoundException(customerId);
+        }
+
+        return this.orderService.findByCustomer(customerId, query);
+    }
 
     async update(updateDto: UpdateCustomerDTO, id: string): Promise<CustomerResponseDTO> {
 
