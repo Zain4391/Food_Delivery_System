@@ -21,7 +21,7 @@ export class DeliveryDriver {
     email: string;
 
     @Column()
-    password: string; // will be assigned by admin, can be changed
+    password: string;
 
     @Column({ length: 11 })
     phone: string;
@@ -37,7 +37,7 @@ export class DeliveryDriver {
     profile_image_url: string;
 
     @Column({ default: true })
-    is_available: true;
+    is_available: boolean;
 
     // ADD Relation: One Rider can Have many Orders
     @OneToMany(() => Order, (order) => order.driver)
