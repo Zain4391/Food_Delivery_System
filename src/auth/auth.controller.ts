@@ -1,38 +1,38 @@
-import { Body, ClassSerializerInterceptor, Controller, HttpCode, HttpStatus, Post, UseInterceptors } from "@nestjs/common";
+import { Body, ClassSerializerInterceptor, Controller, HttpStatus, Post, UseInterceptors } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { RegisterCustomerDTO } from "./dto/register-customer-dto";
-import { CustomerResponseDTO } from "./dto/customer-response-dto";
 import { RegisterDriverDTO } from "./dto/register-driver-dto";
-import { DriverResponseDTO } from "./dto/driver-response-dto";
 import { LoginDTO } from "./dto/login=dto";
-import { AuthResponseDTO } from "./dto/auth-response-dto";
+import { ApiSuccessResponse } from "./dto/api-response-dto";
 
 
 @Controller("api/auth")
 @UseInterceptors(ClassSerializerInterceptor)
 export class AuthController {
 
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('customer/register')
-  async registerCustomer(@Body() registerDto: RegisterCustomerDTO): Promise<CustomerResponseDTO> {
-    return this.authService.registerCustomer(registerDto);
+  async registerCustomer(@Body() registerDto: RegisterCustomerDTO) {
+    const customer = await this.authService.registerCustomer(registerDto);
+    return new ApiSuccessResponse(customer, "Customer registered successfully", HttpStatus.CREATED);
   }
 
   @Post('driver/register')
-  async registerDriver(@Body() registerDto: RegisterDriverDTO): Promise<DriverResponseDTO> {
-    return this.authService.registerDriver(registerDto);
+  async registerDriver(@Body() registerDto: RegisterDriverDTO) {
+    const driver = await this.authService.registerDriver(registerDto);
+    return new ApiSuccessResponse(driver, "Driver registered successfully", HttpStatus.CREATED);
   }
 
-  @HttpCode(HttpStatus.OK)
   @Post('customer/login')
-  async loginCustomer(@Body() loginDto: LoginDTO): Promise<AuthResponseDTO> {
-    return this.authService.customerLogin(loginDto);
+  async loginCustomer(@Body() loginDto: LoginDTO) {
+    const authResponse = await this.authService.customerLogin(loginDto);
+    return new ApiSuccessResponse(authResponse, "Customer logged in successfully", HttpStatus.OK);
   }
 
-  @HttpCode(HttpStatus.OK)
   @Post('driver/login')
-  async loginDriver(@Body() loginDto: LoginDTO): Promise<AuthResponseDTO> {
-    return this.authService.riderLogin(loginDto);
+  async loginDriver(@Body() loginDto: LoginDTO) {
+    const authResponse = await this.authService.riderLogin(loginDto);
+    return new ApiSuccessResponse(authResponse, "Driver logged in successfully", HttpStatus.OK);
   }
 }
