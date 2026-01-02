@@ -8,14 +8,16 @@ This is a full-featured food delivery backend system built with [NestJS](https:/
 
 ## Features
 
-- 👥 **Customer Management** - User registration, authentication, and profile management
-- 🍽️ **Restaurant Management** - Restaurant profiles and menu management
-- 📋 **Menu Items** - Categorized food items with pricing and availability
-- 🛒 **Order Processing** - Complete order lifecycle from placement to delivery
-- 🚚 **Delivery Tracking** - Real-time delivery status and driver assignment
-- 🏍️ **Driver Management** - Delivery driver profiles and vehicle information
-- 🔐 **Authentication** - JWT-based authentication and authorization
+- 👥 **Customer Management** - User registration, authentication, profile management, and order history
+- 🍽️ **Restaurant Management** - Restaurant profiles, menu management, and availability control
+- 📋 **Menu Items** - Categorized food items with pricing, images, and real-time availability
+- 🛒 **Order Processing** - Complete order lifecycle from placement to delivery with status tracking
+- 🚚 **Delivery Tracking** - Real-time delivery status updates and timestamp tracking
+- 🏍️ **Driver Management** - Delivery driver profiles, vehicle management, and availability toggle
+- 🔐 **Authentication** - Role-based JWT authentication (Customer, Driver, Admin)
+- 📁 **File Upload** - Profile images, menu item images, restaurant logos and banners via Supabase Storage
 - 🐰 **Event-Driven** - RabbitMQ integration for asynchronous messaging
+- 🎯 **Consistent API Responses** - Standardized success and error response structures
 
 ## Tech Stack
 
@@ -23,8 +25,10 @@ This is a full-featured food delivery backend system built with [NestJS](https:/
 - **Language:** TypeScript
 - **Database:** PostgreSQL (Supabase)
 - **ORM:** TypeORM
-- **Authentication:** JWT, Passport
+- **Authentication:** JWT, Passport (Customer & Driver strategies)
 - **Message Queue:** RabbitMQ
+- **File Storage:** Supabase Storage
+- **Validation:** class-validator, class-transformer
 - **Code Quality:** ESLint, Prettier
 
 ## Database Schema
@@ -60,6 +64,12 @@ DB_SSL=false
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-change-this
+JWT_CUSTOMER_SECRET=your-customer-jwt-secret
+JWT_DRIVER_SECRET=your-driver-jwt-secret
+
+# Supabase Configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-supabase-anon-key
 
 # RabbitMQ Configuration
 RABBITMQ_URL=amqp://localhost:5672
@@ -112,23 +122,154 @@ $ npm run test
 $ npm run test:e2e
 
 # test coverage
-$ npm run test:cov
+$ npm run test:cov/customer` - Register a new customer
+- `POST /auth/register/driver` - Register a new driver
+- `POST /auth/login/customer` - Customer login
+- `POST /auth/login/driver` - Driver login
+
+### Customer Management
+- `GET /customer/profile` - Get customer profile (Customer)
+- `GET /customer/all` - Get all customers with pagination (Admin)
+- `GET /customer/:id` - Get customer by ID (Admin)
+- `GET /customer/:email` - Get customer by email (Admin)
+- `GET /customer/orders/:id` - Get customer orders (Customer/Admin)
+- `PUT /customer/update/:id` - Update customer profile (Customer)
+- `PUT /customer/update-password/:id` - Update customer password (Customer)
+- `POST /customer/forgot-password` - Reset customer password
+- `POST /customer/upload-profile-image/:id` - Upload profile image (Customer)
+- `DELETE /customer/delete/:id` - Delete customer (Admin)
+
+### Driver Management
+- `GET /driver/profile` - Get driver profile (Driver)
+- `GET /driver/all` - Get all drivers with pagination (Admin)
+- `GET /driver/:id` - Get driver by ID (Admin)
+- `GET /driver/:email` - Get driver by email (Admin)
+- `GET /driver/orders/delivered/:id` - Get delivered orders (Driver/Admin)
+- `GET /driver/orders/pending/:id` - Get pending orders (Driver/Admin)
+- `GET /driver/orders/all/:id` - Get all driver orders (Driver/Admin)
+- `PUT /driver/update/:id` - Update driver profile (Driver)
+- `PUT /driver/update-password/:id` - Update driver password (Driver)
+- `POST /driver/forgot-password` - Reset driver password
+- `POST /driver/upload-p    # Authentication module
+│   ├── decorators/        # Custom decorators (CurrentUser, Roles)
+│   ├── dto/               # DTOs and response structures
+│   ├── guards/            # Auth guards (Customer, Driver, Roles)
+│   ├── strategy/          # JWT strategies
+│   └── types/             # Type definitions
+├── common/                 # Shared modules
+│   ├── enums/             # Role enums
+│   ├── exceptions/        # Custom exception classes
+│   ├── filter/            # Exception filters
+│   └── pipes/             # Validation pipes
+├── config/                 # Configuration files
+│   ├── database.config.ts
+│   ├── jwt.constants.ts
+│   └── supabase.config.ts
+├── delivery/               # Delivery management
+│   ├── dtos/
+│   ├── entities/
+│   ├── delivery.controller.ts
+│   └── delivery.service.ts
+├── drivers/                # Delivery drivers
+│   ├── dtos/
+│   ├── entities/
+│   ├── driver.controller.ts
+│   └── driver.service.ts
+├── migrations/             # TypeORM migrations
+├── orders/                 # Order management
+│   ├── dto/
+│   ├── entities/
+│   ├── order.controller.ts
+│   └── order.service.ts
+├── rabbitmq/               # RabbitMQ integration
+│   ├── rabbitmq.module.ts
+│   └── rabbitmq.service.ts
+├── resturants/             # Restaurant & menu management
+│   ├── dto/
+│   ├── entities/
+│   ├── restaurant.controller.ts
+│   └── restaurant.service.ts
+├── users/                  # User/Customer management
+│   ├── dtos/
+│   ├── entities/
+│   ├── user.controller.ts
+│   └── user.service.ts
+├── app.module.ts           # Root module
+├── main.ts                 # Application entry point
+└── data-source.ts          # TypeORM configuration
 ```
 
-## API Endpoints
+## API Response Format
 
-### Authentication
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Login user
-- `GET /auth/profile` - Get user profile
+### Success Response
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "data": { ... },
+  "message": "Operation successful"
+}
+```
 
-### Orders
-- `POST /orders` - Create a new order
-- `GET /orders` - Get all orders
-- `GET /orders/:id` - Get order by ID
-- `PATCH /orders/:id` - Update order status
-- `DELETE /orders/:id` - Cancel order
+### Error Response
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Error description",
+    "statusCode": 400,
+    "timestamp": "2026-01-03T..."
+  }
+}
+```
 
+## Order Status Flow
+
+Orders follow this status progression:
+1. **pending** → Initial state when order is created
+2. **confirmed** → Restaurant confirms the order
+3. **preparing** → Order is being prepared
+4. **ready** → Order is ready for pickup
+5. **picked_up** → Driver has picked up the order
+6. **delivered** → Order has been delivered
+7. **cancelled** → Order was cancelled (can happen from pending/confirmed/preparing states)
+
+## Roles & Permissions
+
+The application implements role-based access control with three roles:
+
+- **CUSTOMER** - Can create orders, manage profile, view own orders
+- **DRIVER** - Can manage deliveries, update vehicle info, toggle availability
+- **ADMIN** - Full access to all resources and management functionsGET /restaurant/:restaurantId/menu/available` - Get available menu items
+- `GET /restaurant/menu/item/:id` - Get menu item by ID
+- `POST /restaurant/:restaurantId/menu/create` - Create menu item (Admin)
+- `PUT /restaurant/menu/update/:id` - Update menu item (Admin)
+- `DELETE /restaurant/menu/delete/:id` - Delete menu item (Admin)
+- `PATCH /restaurant/menu/toggle-availability/:id` - Toggle item availability (Admin)
+- `POST /restaurant/menu/upload-image/:id` - Upload menu item image (Admin)
+
+### Order Management
+- `GET /order/all` - Get all orders (Admin)
+- `GET /order/:id` - Get order by ID (Customer/Admin)
+- `POST /order/create` - Create new order (Customer)
+- `PUT /order/update/:id` - Update order (Admin)
+- `PATCH /order/update-status/:id` - Update order status (Admin)
+- `PATCH /order/assign-driver/:orderId` - Assign driver to order (Admin)
+- `PATCH /order/cancel/:id` - Cancel order (Customer)
+- `DELETE /order/delete/:id` - Delete order (Admin)
+- `GET /order/customer/:customerId` - Get orders by customer (Customer/Admin)
+- `GET /order/restaurant/:restaurantId` - Get orders by restaurant (Admin)
+- `GET /order/driver/:driverId` - Get orders by driver (Driver/Admin)
+
+### Delivery Management
+- `GET /delivery/all` - Get all deliveries with pagination (Admin)
+- `GET /delivery/:id` - Get delivery by ID (Driver/Admin)
+- `GET /delivery/order/:orderId` - Get delivery by order ID (Driver/Admin)
+- `POST /delivery/create` - Create new delivery (Admin)
+- `PUT /delivery/update/:id` - Update delivery (Admin)
+- `PATCH /delivery/mark-picked-up/:id` - Mark delivery as picked up (Driver)
+- `PATCH /delivery/mark-delivered/:id` - Mark delivery as delivered (Driver)
+- `DELETE /delivery/delete/:id` - Delete delivery (Admin)
 ### Restaurants
 - `POST /restaurants` - Create a new restaurant
 - `GET /restaurants` - Get all restaurants
