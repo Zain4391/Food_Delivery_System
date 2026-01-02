@@ -10,6 +10,7 @@ import { JwtCustomerStrategy } from './strategy/jwt-customer.strategy';
 import { DriverStrategy } from './strategy/jwt-driver.strategy';
 import { JwtCustomerGuard } from './guards/customer.guard';
 import { JwtDriverGuard } from './guards/driver.guard';
+import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { JwtDriverGuard } from './guards/driver.guard';
     JwtModule.register({})
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtCustomerStrategy, DriverStrategy, JwtCustomerGuard, JwtDriverGuard],
-  exports: [AuthService, JwtCustomerGuard, JwtDriverGuard]
+  providers: [AuthService, JwtCustomerStrategy, DriverStrategy, JwtCustomerGuard, JwtDriverGuard, RolesGuard],
+  exports: [AuthService, JwtCustomerGuard, JwtDriverGuard, RolesGuard]
 })
 export class AuthModule {}
