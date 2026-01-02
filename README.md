@@ -246,59 +246,60 @@ src/
 │   ├── dto/
 │   ├── entities/
 │   ├── restaurant.controller.ts
-│   └── restaurant.service.tsPOST /restaurant/menu/upload-image/:id` - Upload menu item image (Admin)
-
-### Order Management
-- `GET /order/all` - Get all orders (Admin)
-- `GET /order/:id` - Get order by ID (Customer/Admin)
-- `POST /order/create` - Create new order (Customer)
-- `PUT /order/update/:id` - Update order (Admin)
-- `PATCH /order/update-status/:id` - Update order status (Admin)
-- `PATCH /order/assign-driver/:orderId` - Assign driver to order (Admin)
-- `PATCH /order/cancel/:id` - Cancel order (Customer)
-- `DELETE /order/delete/:id` - Delete order (Admin)
-- `GET /order/customer/:customerId` - Get orders by customer (Customer/Admin)
-- `GET /order/restaurant/:restaurantId` - Get orders by restaurant (Admin)
-- `GET /order/driver/:driverId` - Get orders by driver (Driver/Admin)
-
-### Delivery Management
-- `GET /delivery/all` - Get all deliveries with pagination (Admin)
-- `GET /delivery/:id` - Get delivery by ID (Driver/Admin)
-- `GET /delivery/order/:orderId` - Get delivery by order ID (Driver/Admin)
-- `POST /delivery/create` - Create new delivery (Admin)
-- `PUT /delivery/update/:id` - Update delivery (Admin)
-- `PATCH /delivery/mark-picked-up/:id` - Mark delivery as picked up (Driver)
-- `PATCH /delivery/mark-delivered/:id` - Mark delivery as delivered (Driver)
-- `DELETE /delivery/delete/:id` - Delete delivery (Admin)
-### Restaurants
-- `POST /restaurants` - Create a new restaurant
-- `GET /restaurants` - Get all restaurants
-- `GET /restaurants/:id` - Get restaurant by ID
-- `PATCH /restaurants/:id` - Update restaurant
-- `DELETE /restaurants/:id` - Delete restaurant
-
-## Project Structure
-
+│   └── restaurant.service.ts
+├── users/                  # User/Customer management
+│   ├── dtos/
+│   ├── entities/
+│   ├── user.controller.ts
+│   └── user.service.ts
+├── app.module.ts           # Root module
+├── main.ts                 # Application entry point
+└── data-source.ts          # TypeORM configuration
 ```
-src/
-├── auth/               # Authentication module
-├── config/             # Configuration files
-│   └── database.config.ts
-├── delivery/           # Delivery management
-│   └── entities/
-├── drivers/            # Delivery drivers
-│   └── entities/
-├── migrations/         # TypeORM migrations
-├── orders/             # Order management
-│   └── entities/
-├── resturants/         # Restaurant & menu management
-│   └── entities/
-├── users/              # User/Customer management
-│   └── entities/
-├── app.module.ts       # Root module
-├── main.ts             # Application entry point
-└── data-source.ts      # TypeORM configuration
+
+## API Response Format
+
+### Success Response
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "data": { },
+  "message": "Operation successful"
+}
 ```
+
+### Error Response
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Error description",
+    "statusCode": 400,
+    "timestamp": "2026-01-03T..."
+  }
+}
+```
+
+## Order Status Flow
+
+Orders follow this status progression:
+
+1. **pending** → Initial state when order is created
+2. **confirmed** → Restaurant confirms the order
+3. **preparing** → Order is being prepared
+4. **ready** → Order is ready for pickup
+5. **picked_up** → Driver has picked up the order
+6. **delivered** → Order has been delivered
+7. **cancelled** → Order was cancelled (can happen from pending/confirmed/preparing states)
+
+## Roles & Permissions
+
+The application implements role-based access control with three roles:
+
+- **CUSTOMER** - Can create orders, manage profile, view own orders
+- **DRIVER** - Can manage deliveries, update vehicle info, toggle availability
+- **ADMIN** - Full access to all resources and management functions
 
 ## Code Formatting
 
