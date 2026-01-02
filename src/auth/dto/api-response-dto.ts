@@ -5,6 +5,9 @@ import { HttpStatus } from "@nestjs/common";
 export class ApiSuccessResponse<T> {
 
     @Expose()
+    statusCode: HttpStatus;
+
+    @Expose()
     success: boolean;
 
     @Expose()
@@ -13,10 +16,11 @@ export class ApiSuccessResponse<T> {
     @Expose()
     message?: string;
 
-    constructor(data: T, message: string) {
+    constructor(data: T, message: string, statusCode: HttpStatus) {
         this.success = true;
         this.message = message;
         this.data = data;
+        this.statusCode = statusCode;
     }
 };
 

@@ -103,7 +103,10 @@ export class OrderService {
         return new OrderResponseDTO(order);
     }
 
-    async create(createDto: CreateOrderDTO): Promise<OrderResponseDTO> {
+    async create(createDto: CreateOrderDTO, customerId: string): Promise<OrderResponseDTO> {
+
+        // Set customer_id from authenticated user
+        createDto.customer_id = customerId;
 
         // Validate customer exists
         const customer = await this.customerRepository.findOne({
