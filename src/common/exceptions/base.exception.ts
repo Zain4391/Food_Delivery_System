@@ -1,17 +1,9 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
+import { ApiErrorResponse } from 'src/auth/dto/api-response-dto';
 
 export class CustomBaseException extends HttpException {
   constructor(message: string, statusCode: HttpStatus) {
-    super(
-      {
-        success: false,
-        error: {
-          message,
-          statusCode,
-          timestamp: new Date().toISOString(),
-        },
-      },
-      statusCode,
-    );
+    const errorResponse = new ApiErrorResponse(message, statusCode);
+    super(errorResponse, statusCode);
   }
 }
