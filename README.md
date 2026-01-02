@@ -122,7 +122,13 @@ $ npm run test
 $ npm run test:e2e
 
 # test coverage
-$ npm run test:cov/customer` - Register a new customer
+$ npm run test:cov
+```
+
+## API Endpoints
+
+### Authentication
+- `POST /auth/register/customer` - Register a new customer
 - `POST /auth/register/driver` - Register a new driver
 - `POST /auth/login/customer` - Customer login
 - `POST /auth/login/driver` - Driver login
@@ -150,7 +156,59 @@ $ npm run test:cov/customer` - Register a new customer
 - `PUT /driver/update/:id` - Update driver profile (Driver)
 - `PUT /driver/update-password/:id` - Update driver password (Driver)
 - `POST /driver/forgot-password` - Reset driver password
-- `POST /driver/upload-p    # Authentication module
+- `POST /driver/upload-profile-image/:id` - Upload profile image (Driver)
+- `PATCH /driver/change-vehicle/:id` - Change vehicle type (Driver)
+- `PATCH /driver/toggle-availability/:id` - Toggle availability status (Driver)
+- `DELETE /driver/delete/:id` - Delete driver (Admin)
+
+### Restaurant Management
+- `GET /restaurant/all` - Get all restaurants with filtering
+- `GET /restaurant/:id` - Get restaurant by ID
+- `POST /restaurant/create` - Create new restaurant (Admin)
+- `PUT /restaurant/update/:id` - Update restaurant (Admin)
+- `DELETE /restaurant/delete/:id` - Delete restaurant (Admin)
+- `PATCH /restaurant/toggle-active/:id` - Toggle restaurant active status (Admin)
+- `POST /restaurant/upload-logo/:id` - Upload restaurant logo (Admin)
+- `POST /restaurant/upload-banner/:id` - Upload restaurant banner (Admin)
+
+### Menu Items
+- `GET /restaurant/:restaurantId/menu/all` - Get all menu items for restaurant
+- `GET /restaurant/:restaurantId/menu/available` - Get available menu items
+- `GET /restaurant/menu/item/:id` - Get menu item by ID
+- `POST /restaurant/:restaurantId/menu/create` - Create menu item (Admin)
+- `PUT /restaurant/menu/update/:id` - Update menu item (Admin)
+- `DELETE /restaurant/menu/delete/:id` - Delete menu item (Admin)
+- `PATCH /restaurant/menu/toggle-availability/:id` - Toggle item availability (Admin)
+- `POST /restaurant/menu/upload-image/:id` - Upload menu item image (Admin)
+
+### Order Management
+- `GET /order/all` - Get all orders (Admin)
+- `GET /order/:id` - Get order by ID (Customer/Admin)
+- `POST /order/create` - Create new order (Customer)
+- `PUT /order/update/:id` - Update order (Admin)
+- `PATCH /order/update-status/:id` - Update order status (Admin)
+- `PATCH /order/assign-driver/:orderId` - Assign driver to order (Admin)
+- `PATCH /order/cancel/:id` - Cancel order (Customer)
+- `DELETE /order/delete/:id` - Delete order (Admin)
+- `GET /order/customer/:customerId` - Get orders by customer (Customer/Admin)
+- `GET /order/restaurant/:restaurantId` - Get orders by restaurant (Admin)
+- `GET /order/driver/:driverId` - Get orders by driver (Driver/Admin)
+
+### Delivery Management
+- `GET /delivery/all` - Get all deliveries with pagination (Admin)
+- `GET /delivery/:id` - Get delivery by ID (Driver/Admin)
+- `GET /delivery/order/:orderId` - Get delivery by order ID (Driver/Admin)
+- `POST /delivery/create` - Create new delivery (Admin)
+- `PUT /delivery/update/:id` - Update delivery (Admin)
+- `PATCH /delivery/mark-picked-up/:id` - Mark delivery as picked up (Driver)
+- `PATCH /delivery/mark-delivered/:id` - Mark delivery as delivered (Driver)
+- `DELETE /delivery/delete/:id` - Delete delivery (Admin)
+
+## Project Structure
+
+```
+src/
+├── auth/
 │   ├── decorators/        # Custom decorators (CurrentUser, Roles)
 │   ├── dto/               # DTOs and response structures
 │   ├── guards/            # Auth guards (Customer, Driver, Roles)
@@ -188,65 +246,7 @@ $ npm run test:cov/customer` - Register a new customer
 │   ├── dto/
 │   ├── entities/
 │   ├── restaurant.controller.ts
-│   └── restaurant.service.ts
-├── users/                  # User/Customer management
-│   ├── dtos/
-│   ├── entities/
-│   ├── user.controller.ts
-│   └── user.service.ts
-├── app.module.ts           # Root module
-├── main.ts                 # Application entry point
-└── data-source.ts          # TypeORM configuration
-```
-
-## API Response Format
-
-### Success Response
-```json
-{
-  "statusCode": 200,
-  "success": true,
-  "data": { ... },
-  "message": "Operation successful"
-}
-```
-
-### Error Response
-```json
-{
-  "success": false,
-  "error": {
-    "message": "Error description",
-    "statusCode": 400,
-    "timestamp": "2026-01-03T..."
-  }
-}
-```
-
-## Order Status Flow
-
-Orders follow this status progression:
-1. **pending** → Initial state when order is created
-2. **confirmed** → Restaurant confirms the order
-3. **preparing** → Order is being prepared
-4. **ready** → Order is ready for pickup
-5. **picked_up** → Driver has picked up the order
-6. **delivered** → Order has been delivered
-7. **cancelled** → Order was cancelled (can happen from pending/confirmed/preparing states)
-
-## Roles & Permissions
-
-The application implements role-based access control with three roles:
-
-- **CUSTOMER** - Can create orders, manage profile, view own orders
-- **DRIVER** - Can manage deliveries, update vehicle info, toggle availability
-- **ADMIN** - Full access to all resources and management functionsGET /restaurant/:restaurantId/menu/available` - Get available menu items
-- `GET /restaurant/menu/item/:id` - Get menu item by ID
-- `POST /restaurant/:restaurantId/menu/create` - Create menu item (Admin)
-- `PUT /restaurant/menu/update/:id` - Update menu item (Admin)
-- `DELETE /restaurant/menu/delete/:id` - Delete menu item (Admin)
-- `PATCH /restaurant/menu/toggle-availability/:id` - Toggle item availability (Admin)
-- `POST /restaurant/menu/upload-image/:id` - Upload menu item image (Admin)
+│   └── restaurant.service.tsPOST /restaurant/menu/upload-image/:id` - Upload menu item image (Admin)
 
 ### Order Management
 - `GET /order/all` - Get all orders (Admin)
