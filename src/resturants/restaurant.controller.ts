@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiSuccessResponse } from "src/auth/dto/api-response-dto";
 import { Roles } from "src/auth/decorators/roles.decorator";
@@ -24,7 +24,7 @@ export class RestaurantController {
 
     @Get("all")
     async findAllRestaurants(@Query() query: RestaurantPaginationDTO) {
-        return await this.restaurantService.findAllRestaurants(query);
+        return new ApiSuccessResponse(await this.restaurantService.findAllRestaurants(query), "Restaurants retrieved successfully", HttpStatus.OK);
     }
 
     @Get(":id")
@@ -37,7 +37,7 @@ export class RestaurantController {
     @Roles(ROLES.ADMIN)
     async createRestaurant(@Body() createDto: CreateRestaurantDTO) {
         const restaurant = await this.restaurantService.createRestaurant(createDto);
-        return new ApiSuccessResponse(restaurant, "Restaurant created successfully");
+        return new ApiSuccessResponse(restaurant, "Restaurant created successfully", HttpStatus.CREATED);
     }
 
     @Put("update/:id")
@@ -48,7 +48,7 @@ export class RestaurantController {
         @Body() updateDto: UpdateRestaurantDTO
     ) {
         const restaurant = await this.restaurantService.updateRestaurant(id, updateDto);
-        return new ApiSuccessResponse(restaurant, "Restaurant updated successfully");
+        return new ApiSuccessResponse(restaurant, "Restaurant updated successfully", HttpStatus.OK);
     }
 
     @Delete("delete/:id")
@@ -56,7 +56,7 @@ export class RestaurantController {
     @Roles(ROLES.ADMIN)
     async removeRestaurant(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.restaurantService.removeRestaurant(id);
-        return new ApiSuccessResponse(null, message);
+        return new ApiSuccessResponse(null, message, HttpStatus.NO_CONTENT);
     }
 
     @Patch("toggle-active/:id")
@@ -64,7 +64,7 @@ export class RestaurantController {
     @Roles(ROLES.ADMIN)
     async toggleRestaurantActive(@Param("id", UuidValidationPipe) id: string) {
         const restaurant = await this.restaurantService.toggleRestaurantActive(id);
-        return new ApiSuccessResponse(restaurant, `Restaurant is now ${restaurant.is_active ? 'active' : 'inactive'}`);
+        return new ApiSuccessResponse(restaurant, `Restaurant is now ${restaurant.is_active ? 'active' : 'inactive'}`, HttpStatus.OK);
     }
 
     @Post("upload-logo/:id")
@@ -76,7 +76,7 @@ export class RestaurantController {
         @UploadedFile() file: Express.Multer.File
     ) {
         const restaurant = await this.restaurantService.uploadRestaurantImage(id, file, 'logo');
-        return new ApiSuccessResponse(restaurant, "Restaurant logo uploaded successfully");
+        return new ApiSuccessResponse(restaurant, "Restaurant logo uploaded successfully", HttpStatus.OK);
     }
 
     @Post("upload-banner/:id")
@@ -88,7 +88,7 @@ export class RestaurantController {
         @UploadedFile() file: Express.Multer.File
     ) {
         const restaurant = await this.restaurantService.uploadRestaurantImage(id, file, 'banner');
-        return new ApiSuccessResponse(restaurant, "Restaurant banner uploaded successfully");
+        return new ApiSuccessResponse(restaurant, "Restaurant banner uploaded successfully", HttpStatus.OK);
     }
 
     // ========== Menu Item Endpoints ==========
@@ -122,7 +122,7 @@ export class RestaurantController {
         @Body() createDto: CreateMenuItemDTO
     ) {
         const menuItem = await this.restaurantService.create(restaurantId, createDto);
-        return new ApiSuccessResponse(menuItem, "Menu item created successfully");
+        return new ApiSuccessResponse(menuItem, "Menu item created successfully", HttpStatus.CREATED);
     }
 
     @Put("menu/update/:id")
@@ -133,7 +133,7 @@ export class RestaurantController {
         @Body() updateDto: UpdateMenuItemDTO
     ) {
         const menuItem = await this.restaurantService.update(id, updateDto);
-        return new ApiSuccessResponse(menuItem, "Menu item updated successfully");
+        return new ApiSuccessResponse(menuItem, "Menu item updated successfully", HttpStatus.OK);
     }
 
     @Delete("menu/delete/:id")
@@ -141,7 +141,7 @@ export class RestaurantController {
     @Roles(ROLES.ADMIN)
     async removeMenuItem(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.restaurantService.remove(id);
-        return new ApiSuccessResponse(null, message);
+        return new ApiSuccessResponse([], message, HttpStatus.OK);
     }
 
     @Patch("menu/toggle-availability/:id")
@@ -149,7 +149,7 @@ export class RestaurantController {
     @Roles(ROLES.ADMIN)
     async toggleMenuItemAvailability(@Param("id", UuidValidationPipe) id: string) {
         const menuItem = await this.restaurantService.toggleAvailability(id);
-        return new ApiSuccessResponse(menuItem, `Menu item is now ${menuItem.is_available ? 'available' : 'unavailable'}`);
+        return new ApiSuccessResponse(menuItem, `Menu item is now ${menuItem.is_available ? 'available' : 'unavailable'}`, HttpStatus.OK);
     }
 
     @Post("menu/upload-image/:id")
@@ -161,6 +161,6 @@ export class RestaurantController {
         @UploadedFile() file: Express.Multer.File
     ) {
         const menuItem = await this.restaurantService.uploadMenuItemImage(id, file);
-        return new ApiSuccessResponse(menuItem, "Menu item image uploaded successfully");
+        return new ApiSuccessResponse(menuItem, "Menu item image uploaded successfully", HttpStatus.OK);
     }
 }
