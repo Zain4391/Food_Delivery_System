@@ -43,7 +43,7 @@ export class DeliveryService {
         }
 
         if (sortBy) {
-            queryBuilder.orderBy(`delivery.${sortBy}`, sortOrder as 'ASC' | 'DESC');
+            queryBuilder.orderBy(`delivery.${sortBy}`, sortOrder);
         } else {
             queryBuilder.orderBy('delivery.created_at', 'DESC');
         }
