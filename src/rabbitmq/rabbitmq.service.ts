@@ -11,7 +11,8 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       transport: Transport.RMQ,
       options: {
         urls: [this.configService.getOrThrow<string>('RABBITMQ_URL')],
-        queue: this.configService.get<string>('RABBITMQ_QUEUE'),
+        exchange: this.configService.getOrThrow<string>('RABBITMQ_EXCHANGE'),
+        exchangeType: 'topic',
         queueOptions: {
           durable: true,
         },
@@ -30,8 +31,8 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     await this.client.close();
   }
 
-  emitEvent(pattern: string, data: any): void {
-    this.client.emit(pattern, data);
-    console.log(`Event emitted: ${pattern}`, data);
+  emitEvent(routingKey: string, data: any) {
+    this.client.emit(routingKey, data);
+    console.log(`Event emitted [${routingKey}]:`, data);
   }
 }
