@@ -293,6 +293,175 @@ Orders follow this status progression:
 6. **delivered** → Order has been delivered
 7. **cancelled** → Order was cancelled (can happen from pending/confirmed/preparing states)
 
+## Event-Driven Architecture
+
+This application uses an event-driven architecture powered by RabbitMQ to enable asynchronous communication between different modules. This design ensures loose coupling, scalability, and resilience.
+
+### Architecture Overview
+
+The application follows a monolithic architecture with event-driven communication between modules:
+
+```
+Customer → Order Service → RabbitMQ → Restaurant Service → RabbitMQ → Delivery Service
+```
+
+### Event Flow
+
+```
+1. Customer creates order (REST API)
+   ↓
+2. OrdersService saves to DB
+   ↓
+3. OrdersService emits 'order.placed' → RabbitMQ
+   ↓
+4. RestaurantsController consumes 'order.placed'
+   ↓
+5. RestaurantsService processes order
+   ↓
+6. RestaurantsService emits 'order.confirmed' → RabbitMQ
+   ↓
+7. OrdersController consumes 'order.confirmed'
+   ↓
+8. OrdersService updates order status to 'confirmed'
+   ↓
+9. RestaurantsService emits 'order.ready' → RabbitMQ
+   ↓
+10. DeliveryController consumes 'order.ready'
+    ↓
+11. DeliveryService assigns driver
+    ↓
+12. DeliveryService emits 'driver.assigned' → RabbitMQ
+    ↓
+13. OrdersController consumes 'driver.assigned'
+    ↓
+14. Driver picks up order (REST API)
+    ↓
+15. DeliveryService emits 'order.picked.up' → RabbitMQ
+    ↓
+16. DeliveryController consumes 'order.picked.up'
+    ↓
+17. Driver delivers order (REST API)
+    ↓
+18. DeliveryService emits 'order.delivered' → RabbitMQ
+    ↓
+19. OrdersController consumes 'order.delivered'
+    ↓
+20. OrdersService updates order status and marks driver as available
+```
+
+### Events Reference
+
+#### Order Service Events
+
+**Emits:**
+- `order.placed` - When a customer creates a new order
+
+**Consumes:**
+- `order.confirmed` - Updates order status and estimated delivery time
+- `driver.assigned` - Updates order with assigned driver ID
+- `order.delivered` - Marks order as delivered and sets driver as available
+
+#### Restaurant Service Events
+
+**Consumes:**
+- `order.placed` - Receives new order notification and confirms it
+
+**Emits:**
+- `order.confirmed` - Confirms order with estimated delivery time
+- `order.ready` - Notifies that food is ready for pickup
+
+#### Delivery Service Events
+
+**Consumes:**
+- `order.ready` - Assigns available driver to order
+- `order.picked.up` - Updates delivery pickup timestamp
+
+**Emits:**
+- `driver.assigned` - Notifies when driver is assigned with driver details
+- `order.picked.up` - Notifies when driver picks up the order
+- `order.delivered` - Notifies when order is delivered
+
+### Event DTOs
+
+All events extend `BaseEventDTO` and are stored in `src/events/`:
+
+```typescript
+// Base Event DTO
+export abstract class BaseEventDTO {
+  @IsUUID()
+  eventId: string;          // Auto-generated UUID
+  
+  @IsDateString()
+  timestamp: string;        // ISO 8601 timestamp
+  
+  @IsString()
+  eventType: string;        // Event type identifier
+}
+```
+
+**Event Types:**
+- `OrderPlacementEvent` - Contains order details, items, customer, restaurant
+- `OrderConfirmedEvent` - Contains order ID, restaurant ID, estimated delivery time
+- `OrderReadyEvent` - Contains order ID, restaurant ID, delivery address
+- `DriverAssignedEvent` - Contains order ID, driver details, estimated pickup time
+- `OrderPickedUpEvent` - Contains order ID, driver ID, customer ID, pickup time
+- `OrderDeliveredEvent` - Contains order ID, driver ID, delivery time
+
+### RabbitMQ Configuration
+
+The application uses RabbitMQ with topic exchange for flexible message routing:
+
+**Queue Configurations:**
+
+```typescript
+ORDERS: {
+  queue: 'order-service-queue',
+  routingKeys: ['order.confirmed', 'driver.assigned', 'order.delivered']
+}
+
+RESTAURANTS: {
+  queue: 'restaurants-service-queue',
+  routingKeys: ['order.placed']
+}
+
+DELIVERY: {
+  queue: 'delivery-service-queue',
+  routingKeys: ['order.ready', 'order.picked.up']
+}
+```
+
+**Exchange:** Topic exchange for pattern-based routing  
+**Durability:** All queues are durable  
+**Message TTL:** 24 hours  
+**Acknowledgment:** Manual ACK enabled
+
+### Benefits of Event-Driven Architecture
+
+1. **Loose Coupling** - Services communicate through events, not direct dependencies
+2. **Scalability** - Easy to scale individual services based on load
+3. **Resilience** - Services can recover from failures independently
+4. **Auditability** - All events are logged and can be traced
+5. **Extensibility** - New services can subscribe to existing events without changes
+6. **Asynchronous Processing** - Non-blocking operations improve performance
+
+### Testing Events
+
+To test the event-driven flow:
+
+1. Ensure RabbitMQ is running
+2. Start the application: `npm run start:dev`
+3. Create an order via REST API
+4. Monitor logs to see events being emitted and consumed
+5. Check order status changes through the workflow
+
+Example log output:
+```
+Event emitted [order.placed]: { orderId: '...', ... }
+Received order.placed event: { orderId: '...', ... }
+Emitted order.confirmed for order: ...
+Received order.confirmed event: { orderId: '...', ... }
+```
+
 ## Roles & Permissions
 
 The application implements role-based access control with three roles:
