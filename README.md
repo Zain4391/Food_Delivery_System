@@ -252,6 +252,10 @@ src/
 │   ├── entities/
 │   ├── user.controller.ts
 │   └── user.service.ts
+├── events/
+|   ├── delivery/ # delivery emitted event DTOs
+│   ├── restaurant/ # Restaurant emitted event DTOs
+│   └── order/ # Order emitted event DTOs
 ├── app.module.ts           # Root module
 ├── main.ts                 # Application entry point
 └── data-source.ts          # TypeORM configuration
