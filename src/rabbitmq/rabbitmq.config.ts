@@ -36,7 +36,6 @@ export const QUEUE_CONFIGS = {
         routingKeys: [
             'order.confirmed',
             'driver.assigned',
-            'order.picked.up',
             'order.delivered'
         ]
     },
@@ -49,7 +48,8 @@ export const QUEUE_CONFIGS = {
     DELIVERY: {
         queue: process.env.RABBITMQ_DELIVERY_QUEUE || 'delivery-service-queue',
         routingKeys: [
-            'order.ready'
+            'order.ready',
+            'order.picked.up'
         ]
     }
 }

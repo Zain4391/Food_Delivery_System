@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Order, OrderStatus } from "./entities/order.entity";
@@ -27,9 +27,13 @@ import { MenuItem } from "src/resturants/entities/menu-item.entity";
 import { Restaurant } from "src/resturants/entities/restaurant.entity";
 import { Customer } from "src/users/entities/user.entity";
 import { DeliveryDriver } from "src/drivers/entities/driver.entity";
+import { RabbitMQService } from "src/rabbitmq/rabbitmq.service";
+import { OrderPlacementEvent } from "./events/order-placed.event";
 
 @Injectable()
 export class OrderService {
+
+    private readonly log = new Logger(OrderService.name);
 
     constructor(
         @InjectRepository(Order)
@@ -43,7 +47,8 @@ export class OrderService {
         @InjectRepository(Customer)
         private customerRepository: Repository<Customer>,
         @InjectRepository(DeliveryDriver)
-        private driverRepository: Repository<DeliveryDriver>
+        private driverRepository: Repository<DeliveryDriver>,
+        private rabbitMQService: RabbitMQService
     ) {}
 
     async findAll(query: OrderPaginationDTO): Promise<Pagination<OrderResponseDTO>> {
@@ -216,6 +221,21 @@ export class OrderService {
             throw new OrderNotFoundException(savedOrder.id);
         }
 
+        const event = new OrderPlacementEvent({
+            orderId: completeOrder.id,
+            customerId: completeOrder.customer_id,
+            restaurantId: completeOrder.restaurant_id,
+            items: completeOrder.orderItems,
+            totalAmount: completeOrder.total_amount,
+            deliveryAddress: completeOrder.delivery_address
+        });
+
+        this.log.log("Event Made:", event);
+
+        this.rabbitMQService.emitEvent('order.placed', event);
+
+        this.log.log("Event published:", event.eventId);
+
         return new OrderResponseDTO(completeOrder);
     }
 
@@ -302,7 +322,6 @@ export class OrderService {
         }
 
         const savedOrder = await this.orderRepository.save(order);
-
         return new OrderResponseDTO(savedOrder);
     }
 
@@ -329,11 +348,14 @@ export class OrderService {
             throw new DriverNotAvailableException(driverId);
         }
 
+        // Mark driver as unavailable
+        driver.is_available = false;
+        await this.driverRepository.save(driver);
+
         order.driver_id = driverId;
         order.updated_at = new Date();
 
         const savedOrder = await this.orderRepository.save(order);
-
         return new OrderResponseDTO(savedOrder);
     }
 
@@ -420,6 +442,30 @@ export class OrderService {
 
         query.driver_id = driverId;
         return this.findAll(query);
+    }
+
+    async handleOrderDelivered(orderId: string): Promise<void> {
+        const order = await this.orderRepository.findOne({
+            where: { id: orderId },
+            relations: ['driver']
+        });
+
+        if (!order) {
+            throw new OrderNotFoundException(orderId);
+        }
+
+        // Update order status to delivered
+        order.status = OrderStatus.DELIVERED;
+        order.updated_at = new Date();
+        await this.orderRepository.save(order);
+
+        // Mark driver as available again
+        if (order.driver) {
+            order.driver.is_available = true;
+            await this.driverRepository.save(order.driver);
+        }
+
+        this.log.log(`Order ${orderId} marked as delivered, driver ${order.driver_id} is now available`);
     }
 
     private validateStatusTransition(currentStatus: OrderStatus, newStatus: OrderStatus): void {
