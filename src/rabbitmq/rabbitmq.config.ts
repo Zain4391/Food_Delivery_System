@@ -36,6 +36,7 @@ export const QUEUE_CONFIGS = {
         routingKeys: [
             'order.confirmed',
             'driver.assigned',
+            'order.picked.up',
             'order.delivered'
         ]
     },
