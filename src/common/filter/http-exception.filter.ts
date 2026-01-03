@@ -1,5 +1,6 @@
 import { Catch, ExceptionFilter, ArgumentsHost, HttpException, Logger } from "@nestjs/common";
 import { Response, Request } from "express";
+import { ApiErrorResponse } from "src/auth/dto/api-response-dto";
 
 
 @Catch()
@@ -36,16 +37,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       `${request.method} ${request.url} - Status: ${status} - Message: ${messageStr}`,
     );
 
-    response.status(status).json(
-      errorResponse || {
-        success: false,
-        error: {
-          statusCode: status,
-          message,
-          timestamp: new Date().toISOString(),
-          path: request.url
-        }
-      }
-    );
+    const errorResponseObj = new ApiErrorResponse(messageStr, status);
+
+    response.status(status).json(errorResponse || errorResponseObj);
   }
 }

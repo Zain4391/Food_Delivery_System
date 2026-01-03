@@ -34,9 +34,11 @@ export class ApiErrorResponse {
 
     constructor(message: string, statusCode: HttpStatus) {
         this.success = false;
-        this.error.message = message;
-        this.error.statusCode = statusCode;
-        this.error.timestamp = new Date().toISOString();
+        this.error = {
+            message: message,
+            statusCode: statusCode,
+            timestamp: new Date().toISOString()
+        };
     }
 
 };
