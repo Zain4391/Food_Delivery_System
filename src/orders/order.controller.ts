@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpStatus, Logger, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { EventPattern, Payload } from "@nestjs/microservices";
 import { CurrentUser } from "src/auth/decorators/current-user-decorator";
 import { ApiSuccessResponse } from "src/auth/dto/api-response-dto";
 import { Roles } from "src/auth/decorators/roles.decorator";
@@ -13,9 +14,16 @@ import { OrderPaginationDTO } from "./dto/order-pagination.dto";
 import { UpdateOrderDTO } from "./dto/update-order.dto";
 import { OrderStatus } from "./entities/order.entity";
 import { OrderService } from "./order.service";
+import { OrderConfirmedEvent } from "src/events/restaurant/order-confirmed.event";
+import { DriverAssignedEvent } from "src/events/delivery/driver-assigned.event";
+import { OrderDeliveredEvent } from "src/events/delivery/order-delivered.event";
+
+
 
 @Controller("order")
 export class OrderController {
+
+    private readonly logger = new Logger(OrderController.name);
 
     constructor(
         private readonly orderService: OrderService
@@ -120,5 +128,25 @@ export class OrderController {
         @Query() query: OrderPaginationDTO
     ) {
         return new ApiSuccessResponse(await this.orderService.findByDriver(driverId, query), `Orders for driver ${driverId} found`, HttpStatus.OK);
+    }
+
+    // ========== Event Handlers ==========
+
+    @EventPattern('order.confirmed')
+    async handleOrderConfirmed(@Payload() data: OrderConfirmedEvent) {
+        this.logger.log(`Received order.confirmed event:`, data);
+        await this.orderService.handleOrderConfirmed(data);
+    }
+
+    @EventPattern('driver.assigned')
+    async handleDriverAssigned(@Payload() data: DriverAssignedEvent) {
+        this.logger.log(`Received driver.assigned event:`, data);
+        await this.orderService.handleDriverAssigned(data);
+    }
+
+    @EventPattern('order.delivered')
+    async handleOrderDelivered(@Payload() data: OrderDeliveredEvent) {
+        this.logger.log(`Received order.delivered event:`, data);
+        await this.orderService.handleOrderDelivered(data.orderId);
     }
 }

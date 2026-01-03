@@ -1,7 +1,7 @@
 import { Type } from "class-transformer";
 import { IsArray, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
 import { BaseEventDTO } from "src/common/events/base-event.dto";
-import { OrderItemDTO } from "../dto/create-order.dto";
+import { OrderItemDTO } from "../../orders/dto/create-order.dto";
 
 export class OrderPlacementEvent extends BaseEventDTO {
 

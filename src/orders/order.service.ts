@@ -28,7 +28,9 @@ import { Restaurant } from "src/resturants/entities/restaurant.entity";
 import { Customer } from "src/users/entities/user.entity";
 import { DeliveryDriver } from "src/drivers/entities/driver.entity";
 import { RabbitMQService } from "src/rabbitmq/rabbitmq.service";
-import { OrderPlacementEvent } from "./events/order-placed.event";
+import { OrderPlacementEvent } from "../events/order/order-placed.event";
+import { OrderConfirmedEvent } from "src/events/restaurant/order-confirmed.event";
+import { DriverAssignedEvent } from "src/events/delivery/driver-assigned.event";
 
 @Injectable()
 export class OrderService {
@@ -466,6 +468,39 @@ export class OrderService {
         }
 
         this.log.log(`Order ${orderId} marked as delivered, driver ${order.driver_id} is now available`);
+    }
+
+    async handleOrderConfirmed(data: OrderConfirmedEvent): Promise<void> {
+        const order = await this.orderRepository.findOne({
+            where: { id: data.orderId }
+        });
+
+        if (!order) {
+            throw new OrderNotFoundException(data.orderId);
+        }
+
+        order.status = OrderStatus.CONFIRMED;
+        order.estimated_delivery_time = new Date(data.estimatedDeliveryTime);
+        order.updated_at = new Date();
+        
+        await this.orderRepository.save(order);
+        this.log.log(`Order ${data.orderId} confirmed with estimated delivery: ${data.estimatedDeliveryTime}`);
+    }
+
+    async handleDriverAssigned(data: DriverAssignedEvent): Promise<void> {
+        const order = await this.orderRepository.findOne({
+            where: { id: data.orderId }
+        });
+
+        if (!order) {
+            throw new OrderNotFoundException(data.orderId);
+        }
+
+        order.driver_id = data.driverId;
+        order.updated_at = new Date();
+        
+        await this.orderRepository.save(order);
+        this.log.log(`Driver ${data.driverId} assigned to order ${data.orderId}`);
     }
 
     private validateStatusTransition(currentStatus: OrderStatus, newStatus: OrderStatus): void {

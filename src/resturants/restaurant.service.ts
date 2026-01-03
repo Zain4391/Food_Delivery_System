@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { MenuItem } from "./entities/menu-item.entity";
 import { Repository } from "typeorm";
@@ -15,15 +15,25 @@ import { UpdateRestaurantDTO } from "./dto/update-restaurant.dto";
 import { CreateRestaurantDTO } from "./dto/create-restaurant.dto";
 import { RestaurantPaginationDTO } from "./dto/restaurant-pagination.dto";
 import { supabaseClient } from "src/config/supabase.config";
+import { RabbitMQService } from "src/rabbitmq/rabbitmq.service";
+import { Order } from "src/orders/entities/order.entity";
+import { OrderConfirmedEvent } from "../events/restaurant/order-confirmed.event";
+import { OrderReadyEvent } from "../events/restaurant/order-ready.event";
+import { OrderPlacementEvent } from "src/events/order/order-placed.event";
 
 @Injectable()
 export class RestaurantService {
+
+    private readonly logger = new Logger(RestaurantService.name);
 
     constructor(
         @InjectRepository(MenuItem)
         private menuItemRepository: Repository<MenuItem>,
         @InjectRepository(Restaurant)
-        private restaurantRepository: Repository<Restaurant>
+        private restaurantRepository: Repository<Restaurant>,
+        @InjectRepository(Order)
+        private orderRepository: Repository<Order>,
+        private readonly rabbitMQService: RabbitMQService
     ) {}
 
     // Menu Items Related
@@ -543,5 +553,52 @@ export class RestaurantService {
         return new RestaurantResponseDTO(savedRestaurant);
     }
 
+    // ========== Event Handlers ==========
+
+    async handleOrderPlaced(data: OrderPlacementEvent): Promise<void> {
+        this.logger.log(`Restaurant received order.placed event for order: ${data.orderId}`);
+        
+        // Simulate restaurant confirming the order
+        // In real app, this might wait for restaurant manager approval
+        const order = await this.orderRepository.findOne({
+            where: { id: data.orderId }
+        });
+
+        if (!order) {
+            this.logger.error(`Order ${data.orderId} not found`);
+            return;
+        }
+
+        // Emit order.confirmed event
+        const confirmedEvent = new OrderConfirmedEvent({
+            orderId: order.id,
+            restaurantId: order.restaurant_id,
+            estimatedDeliveryTime: order.estimated_delivery_time?.toISOString() || new Date(Date.now() + 45 * 60000).toISOString()
+        });
+
+        this.rabbitMQService.emitEvent('order.confirmed', confirmedEvent);
+        this.logger.log(`Emitted order.confirmed for order: ${data.orderId}`);
+    }
+
+    async markOrderReady(orderId: string): Promise<void> {
+        const order = await this.orderRepository.findOne({
+            where: { id: orderId }
+        });
+
+        if (!order) {
+            this.logger.error(`Order ${orderId} not found`);
+            return;
+        }
+
+        // Emit order.ready event
+        const readyEvent = new OrderReadyEvent({
+            orderId: order.id,
+            restaurantId: order.restaurant_id,
+            deliveryAddress: order.delivery_address
+        });
+
+        this.rabbitMQService.emitEvent('order.ready', readyEvent);
+        this.logger.log(`Emitted order.ready for order: ${orderId}`);
+    }
 
 }

@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpStatus, Logger, Param, Patch, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { EventPattern, Payload } from "@nestjs/microservices";
 import { ApiSuccessResponse } from "src/auth/dto/api-response-dto";
 import { Roles } from "src/auth/decorators/roles.decorator";
 import { RolesGuard } from "src/auth/guards/roles.guard";
@@ -12,9 +13,12 @@ import { RestaurantPaginationDTO } from "./dto/restaurant-pagination.dto";
 import { UpdateMenuItemDTO } from "./dto/update-menu-item.dto";
 import { UpdateRestaurantDTO } from "./dto/update-restaurant.dto";
 import { RestaurantService } from "./restaurant.service";
+import { OrderPlacementEvent } from "src/events/order/order-placed.event";
 
 @Controller("restaurant")
 export class RestaurantController {
+
+    private readonly logger = new Logger(RestaurantController.name);
 
     constructor(
         private readonly restaurantService: RestaurantService
@@ -163,4 +167,22 @@ export class RestaurantController {
         const menuItem = await this.restaurantService.uploadMenuItemImage(id, file);
         return new ApiSuccessResponse(menuItem, "Menu item image uploaded successfully", HttpStatus.OK);
     }
+
+    @Patch("mark-ready/:orderId")
+    @UseGuards(RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async markOrderReady(@Param("orderId", UuidValidationPipe) orderId: string) {
+        await this.restaurantService.markOrderReady(orderId);
+        return new ApiSuccessResponse(null, "Order marked as ready", HttpStatus.OK);
+    }
+
+    // ========== Event Handlers ==========
+
+    @EventPattern('order.placed')
+    async handleOrderPlaced(@Payload() data: OrderPlacementEvent) {
+        this.logger.log(`Received order.placed event:`, data);
+        await this.restaurantService.handleOrderPlaced(data);
+    }
+
+    
 }
