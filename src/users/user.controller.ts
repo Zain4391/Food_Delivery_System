@@ -42,7 +42,7 @@ export class CustomerController {
         return new ApiSuccessResponse(await this.customerService.findById(id), "User found successfully", HttpStatus.OK);
     }
 
-    @Get(":email")
+    @Get("/email/:email")
     @UseGuards(RolesGuard)
     @Roles(ROLES.ADMIN)
     async findByEmail(@Param('email') email: string) {
