@@ -7,10 +7,12 @@ import { Restaurant } from "src/resturants/entities/restaurant.entity";
 import { Customer } from "src/users/entities/user.entity";
 import { DeliveryDriver } from "src/drivers/entities/driver.entity";
 import { OrderService } from "./order.service";
+import { RabbitMQModule } from "src/rabbitmq/rabbitmq.module";
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Order, OrderItem, MenuItem, Restaurant, Customer, DeliveryDriver])
+        TypeOrmModule.forFeature([Order, OrderItem, MenuItem, Restaurant, Customer, DeliveryDriver]),
+        RabbitMQModule
     ],
     providers: [OrderService],
     controllers: [],
