@@ -12,7 +12,7 @@ import { UpdateDriverDTO } from "./dtos/update-driver-dto";
 import { ForgotPasswordDTO } from "./dtos/forgot-password.dto";
 import { UpdatePasswordDTO } from "./dtos/update-password.dto";
 import { InvalidCredentialsException } from "src/common/exceptions/auth.exceptions";
-import { supabaseClient } from "src/config/supabase.config";
+import { getSupabaseClient } from "src/config/supabase.config";
 import { OrderService } from "src/orders/order.service";
 import { OrderPaginationDTO } from "src/orders/dto/order-pagination.dto";
 import { OrderResponseDTO } from "src/orders/dto/order-response.dto";
@@ -224,7 +224,7 @@ export class DriverService {
             if (driver.profile_image_url) {
                 const oldFileName = driver.profile_image_url.split('/').pop();
                 if (oldFileName) {
-                    await supabaseClient.storage
+                    await getSupabaseClient().storage
                         .from('profile-banner-images')
                         .remove([`drivers/${oldFileName}`]);
                 }
@@ -234,7 +234,7 @@ export class DriverService {
             const fileName = `${id}-${Date.now()}-${file.originalname.replace(/\s/g, '-')}`;
             const fileBuffer = file.buffer;
             
-            const { error: uploadError } = await supabaseClient.storage
+            const { error: uploadError } = await getSupabaseClient().storage
                 .from('profile-banner-images')
                 .upload(`drivers/${fileName}`, fileBuffer, {
                     contentType: mimeType,
@@ -246,7 +246,7 @@ export class DriverService {
             }
 
             // Get public URL
-            const { data: { publicUrl } } = supabaseClient.storage
+            const { data: { publicUrl } } = getSupabaseClient().storage
                 .from('profile-banner-images')
                 .getPublicUrl(`drivers/${fileName}`);
 

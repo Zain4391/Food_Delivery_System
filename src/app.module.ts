@@ -4,9 +4,15 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CustomersModule } from './users/user.module';
+import { RestaurantModule } from './resturants/restaurant.module';
+import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
+import { OrdersModule } from './orders/orders.module';
+import { DeliveryModule } from './delivery/delivery.module';
+import { DriverModule } from './drivers/driver.module';
 
 @Module({
-  imports: [AuthModule, 
+  imports: [AuthModule, CustomersModule, RestaurantModule, RabbitMQModule, OrdersModule, DeliveryModule, DriverModule,
     ConfigModule.forRoot({
       isGlobal: true
     }),

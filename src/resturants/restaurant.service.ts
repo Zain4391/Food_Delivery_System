@@ -14,7 +14,7 @@ import { UpdateMenuItemDTO } from "./dto/update-menu-item.dto";
 import { UpdateRestaurantDTO } from "./dto/update-restaurant.dto";
 import { CreateRestaurantDTO } from "./dto/create-restaurant.dto";
 import { RestaurantPaginationDTO } from "./dto/restaurant-pagination.dto";
-import { supabaseClient } from "src/config/supabase.config";
+import { getSupabaseClient } from "src/config/supabase.config";
 import { RabbitMQService } from "src/rabbitmq/rabbitmq.service";
 import { Order } from "src/orders/entities/order.entity";
 import { OrderConfirmedEvent } from "../events/restaurant/order-confirmed.event";
@@ -288,7 +288,7 @@ export class RestaurantService {
             if (item.image_url) {
                 const oldFileName = item.image_url.split('/').pop();
                 if(oldFileName) {
-                    await supabaseClient.storage
+                    await getSupabaseClient().storage
                           .from('profile-banner-images')
                           .remove([`menuItems/${oldFileName}`]);
                 }
@@ -297,7 +297,7 @@ export class RestaurantService {
             const fileName = `${id}-${Date.now()}-${file.originalname.replace(/\s/g, '-')}`;
             const fileBuffer = file.buffer;
 
-            const { error: uploadError } = await supabaseClient.storage.from('profile-banner-images').upload(`menuItems/${fileName}`, fileBuffer, {
+            const { error: uploadError } = await getSupabaseClient().storage.from('profile-banner-images').upload(`menuItems/${fileName}`, fileBuffer, {
                 contentType: mimeType,
                 upsert: true
             });
@@ -306,7 +306,7 @@ export class RestaurantService {
                 throw new FileUploadException(uploadError.message);
             }
 
-            const { data: { publicUrl } } = supabaseClient.storage
+            const { data: { publicUrl } } = getSupabaseClient().storage
                 .from('profile-banner-images')
                 .getPublicUrl(`menuItems/${fileName}`);
 
@@ -352,7 +352,7 @@ export class RestaurantService {
             if (currentImageUrl) {
                 const oldFileName = currentImageUrl.split('/').pop();
                 if (oldFileName) {
-                    await supabaseClient.storage
+                    await getSupabaseClient().storage
                         .from('profile-banner-images')
                         .remove([`${storagePath}/${oldFileName}`]);
                 }
@@ -361,7 +361,7 @@ export class RestaurantService {
             const fileName = `${id}-${Date.now()}-${file.originalname.replace(/\s/g, '-')}`;
             const fileBuffer = file.buffer;
 
-            const { error: uploadError } = await supabaseClient.storage
+            const { error: uploadError } = await getSupabaseClient().storage
                 .from('profile-banner-images')
                 .upload(`${storagePath}/${fileName}`, fileBuffer, {
                     contentType: mimeType,
@@ -372,7 +372,7 @@ export class RestaurantService {
                 throw new FileUploadException(uploadError.message);
             }
 
-            const { data: { publicUrl } } = supabaseClient.storage
+            const { data: { publicUrl } } = getSupabaseClient().storage
                 .from('profile-banner-images')
                 .getPublicUrl(`${storagePath}/${fileName}`);
 
