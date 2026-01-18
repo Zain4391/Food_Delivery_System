@@ -19,10 +19,8 @@ export function getRabbitMQConfig(config: QueueConfig): MicroserviceOptions {
                     'x-message-ttl': 86400000 // 24 hr message TTL
                 }
             },
-
-            exchange: process.env.RABBITMQ_EXCHANGE as string,
-            exchangeType: 'topic',
-            routingKey: config.routingKeys
+            // For multiple routing keys, don't specify routingKey here
+            // Instead, use @EventPattern() decorators in controllers
         }
     } as unknown as RmqOptions;
 }

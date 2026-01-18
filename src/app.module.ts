@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthService } from './auth/auth.service';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,7 +15,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         url: configService.getOrThrow<string>("DATABASE_URL"),
-        ssl: true,
+        ssl: {
+          rejectUnauthorized: false
+        },
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: false,
         autoLoadEntities: true,
@@ -26,6 +27,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     })
   ],
   controllers: [AppController],
-  providers: [AppService, AuthService],
+  providers: [AppService],
 })
 export class AppModule {}
