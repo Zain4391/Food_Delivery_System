@@ -4,6 +4,7 @@ import { RegisterCustomerDTO } from "./dto/register-customer-dto";
 import { RegisterDriverDTO } from "./dto/register-driver-dto";
 import { LoginDTO } from "./dto/login=dto";
 import { ApiSuccessResponse } from "./dto/api-response-dto";
+import { RegisterAdminDTO } from "./dto/register-admin-dto";
 
 
 @Controller("api/auth")
@@ -34,5 +35,17 @@ export class AuthController {
   async loginDriver(@Body() loginDto: LoginDTO) {
     const authResponse = await this.authService.riderLogin(loginDto);
     return new ApiSuccessResponse(authResponse, "Driver logged in successfully", HttpStatus.OK);
+  }
+
+  @Post('admin/register')
+  async registerAdmin(@Body() registerDto: RegisterAdminDTO) {
+    const authResponse = await this.authService.registerAdmin(registerDto);
+    return new ApiSuccessResponse(authResponse, "Admin Registered successfully", HttpStatus.OK);
+  }
+
+  @Post('admin/login')
+  async loginAdmin(@Body() loginDto: LoginDTO) {
+    const authResponse = await this.authService.loginAdmin(loginDto);
+    return new ApiSuccessResponse(authResponse, "Admin logged in successfully", HttpStatus.OK);
   }
 }

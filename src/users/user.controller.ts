@@ -14,6 +14,7 @@ import { OrderPaginationDTO } from "src/orders/dto/order-pagination.dto";
 import { UpdateCustomerDTO } from "./dtos/update-customer.dto";
 import { ForgotPasswordDTO } from "./dtos/forgot-password.dto";
 import { UpdatePasswordDTO } from "./dtos/update-password.dto";
+import { JwtAdminGuard } from "src/auth/guards/admin.guard";
 
 @Controller("customer")
 export class CustomerController {
@@ -28,22 +29,28 @@ export class CustomerController {
         return new ApiSuccessResponse(customer, "Customer Profile retrieved successfully", HttpStatus.OK);
     }
 
+    @Get("admin/profile")
+    @UseGuards(JwtAdminGuard)
+    getAdminProfile(@CurrentUser() admin: AuthenticatedUser) {
+        return new ApiSuccessResponse(admin, "Admin Profile retrieved successfully", HttpStatus.OK);
+    }
+
     @Get("all")
-    @UseGuards(RolesGuard)
+    @UseGuards(RolesGuard, JwtAdminGuard)
     @Roles(ROLES.ADMIN)
     async findAllCustomers(@Query() query: CustomerPaginationDTO) {
         return new ApiSuccessResponse(await this.customerService.findAll(query), "Restaurant created successfully", HttpStatus.OK);
     }
 
     @Get(":id")
-    @UseGuards(RolesGuard)
+    @UseGuards(RolesGuard, JwtAdminGuard)
     @Roles(ROLES.ADMIN)
     async findOneById(@Param('id', UuidValidationPipe) id: string) {
         return new ApiSuccessResponse(await this.customerService.findById(id), "User found successfully", HttpStatus.OK);
     }
 
     @Get("/email/:email")
-    @UseGuards(RolesGuard)
+    @UseGuards(RolesGuard, JwtAdminGuard)
     @Roles(ROLES.ADMIN)
     async findByEmail(@Param('email') email: string) {
         return new ApiSuccessResponse(await this.customerService.findByEmail(email), "User found by email successfully", HttpStatus.OK);
@@ -90,7 +97,7 @@ export class CustomerController {
     }
 
     @Delete("/delete/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(RolesGuard, JwtAdminGuard)
     @Roles(ROLES.ADMIN)
     async deleteCustomer(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.customerService.remove(id);

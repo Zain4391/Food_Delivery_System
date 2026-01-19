@@ -5,7 +5,7 @@ export interface JwtPayload {
     email: string;
     name: string;
     role: ROLES;
-    userType: 'customer' | 'driver'
+    userType: 'customer' | 'driver' | 'admin'
 }
 
 export interface AuthenticatedUser {
@@ -13,5 +13,5 @@ export interface AuthenticatedUser {
     email: string;
     name: string;
     role: ROLES;
-    userType: 'customer' | 'driver';
+    userType: 'customer' | 'driver' | 'admin' ;
 }

@@ -19,6 +19,18 @@ export class CustomerAlreadyExistsException extends CustomBaseException {
   }
 }
 
+export class AdminAlreadyExistsException extends CustomBaseException {
+  constructor(email: string) {
+    super(`Admin with email ${email} already exists`, HttpStatus.CONFLICT);
+  }
+}
+
+export class AdminNotFoundException extends CustomBaseException {
+  constructor(id: string) {
+    super(`Admin with ID ${id} not found`, HttpStatus.NOT_FOUND);
+  }
+}
+
 export class CustomerEmailNotFoundException extends CustomBaseException {
   constructor(email: string) {
     super(`Customer with ID ${email} not found`, HttpStatus.NOT_FOUND);
