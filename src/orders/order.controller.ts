@@ -17,6 +17,7 @@ import { OrderService } from "./order.service";
 import { OrderConfirmedEvent } from "src/events/restaurant/order-confirmed.event";
 import { DriverAssignedEvent } from "src/events/delivery/driver-assigned.event";
 import { OrderDeliveredEvent } from "src/events/delivery/order-delivered.event";
+import { JwtAdminGuard } from "src/auth/guards/admin.guard";
 
 
 
@@ -30,21 +31,28 @@ export class OrderController {
     ) {}
 
     @Get("all")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findAllOrders(@Query() query: OrderPaginationDTO) {
         return new ApiSuccessResponse(await this.orderService.findAll(query), "Orders found successfully", HttpStatus.OK);
     }
 
     @Get(":id")
-    @UseGuards(RolesGuard, JwtCustomerGuard)
-    @Roles(ROLES.ADMIN, ROLES.CUSTOMER)
+    @UseGuards(JwtCustomerGuard, RolesGuard)
+    @Roles(ROLES.CUSTOMER)
     async findOrderById(@Param("id", UuidValidationPipe) id: string) {
         return new ApiSuccessResponse(await this.orderService.findById(id), `Order with ID ${id} found`, HttpStatus.OK);
     }
 
+    @Get("admin/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findOrderByIdAdmin(@Param("id", UuidValidationPipe) id: string) {
+        return new ApiSuccessResponse(await this.orderService.findById(id), `Order with ID ${id} found`, HttpStatus.OK);
+    }
+
     @Post("create")
-    @UseGuards(JwtCustomerGuard)
+    @UseGuards(JwtCustomerGuard, RolesGuard)
     @Roles(ROLES.CUSTOMER)
     async createOrder(@Body() createDto: CreateOrderDTO, @CurrentUser() user: AuthenticatedUser) {
         const order = await this.orderService.create(createDto, user.id);
@@ -52,7 +60,7 @@ export class OrderController {
     }
 
     @Put("update/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async updateOrder(
         @Param("id", UuidValidationPipe) id: string,
@@ -63,7 +71,7 @@ export class OrderController {
     }
 
     @Patch("update-status/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async updateOrderStatus(
         @Param("id", UuidValidationPipe) id: string,
@@ -74,7 +82,7 @@ export class OrderController {
     }
 
     @Patch("assign-driver/:orderId")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async assignDriver(
         @Param("orderId", UuidValidationPipe) orderId: string,
@@ -85,7 +93,7 @@ export class OrderController {
     }
 
     @Patch("cancel/:id")
-    @UseGuards(JwtCustomerGuard)
+    @UseGuards(JwtCustomerGuard, RolesGuard)
     @Roles(ROLES.CUSTOMER)
     async cancelOrder(@Param("id", UuidValidationPipe) id: string) {
         const order = await this.orderService.cancelOrder(id);
@@ -93,7 +101,7 @@ export class OrderController {
     }
 
     @Delete("delete/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async removeOrder(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.orderService.remove(id);
@@ -101,8 +109,8 @@ export class OrderController {
     }
 
     @Get("customer/:customerId")
-    @UseGuards(RolesGuard, JwtCustomerGuard)
-    @Roles(ROLES.ADMIN, ROLES.CUSTOMER)
+    @UseGuards(JwtCustomerGuard, RolesGuard)
+    @Roles(ROLES.CUSTOMER)
     async findOrdersByCustomer(
         @Param("customerId", UuidValidationPipe) customerId: string,
         @Query() query: OrderPaginationDTO
@@ -110,8 +118,18 @@ export class OrderController {
         return new ApiSuccessResponse(await this.orderService.findByCustomer(customerId, query), `Orders for user: ${customerId} found`, HttpStatus.OK);
     }
 
+    @Get("admin/customer/:customerId")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findOrdersByCustomerAdmin(
+        @Param("customerId", UuidValidationPipe) customerId: string,
+        @Query() query: OrderPaginationDTO
+    ) {
+        return new ApiSuccessResponse(await this.orderService.findByCustomer(customerId, query), `Orders for user: ${customerId} found`, HttpStatus.OK);
+    }
+
     @Get("restaurant/:restaurantId")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findOrdersByRestaurant(
         @Param("restaurantId", UuidValidationPipe) restaurantId: string,
@@ -121,9 +139,19 @@ export class OrderController {
     }
 
     @Get("driver/:driverId")
-    @UseGuards(RolesGuard, JwtDriverGuard)
-    @Roles(ROLES.ADMIN, ROLES.DRIVER)
+    @UseGuards(JwtDriverGuard, RolesGuard)
+    @Roles(ROLES.DRIVER)
     async findOrdersByDriver(
+        @Param("driverId", UuidValidationPipe) driverId: string,
+        @Query() query: OrderPaginationDTO
+    ) {
+        return new ApiSuccessResponse(await this.orderService.findByDriver(driverId, query), `Orders for driver ${driverId} found`, HttpStatus.OK);
+    }
+
+    @Get("admin/driver/:driverId")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findOrdersByDriverAdmin(
         @Param("driverId", UuidValidationPipe) driverId: string,
         @Query() query: OrderPaginationDTO
     ) {

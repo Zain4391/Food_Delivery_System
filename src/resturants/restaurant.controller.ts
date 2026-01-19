@@ -14,6 +14,7 @@ import { UpdateMenuItemDTO } from "./dto/update-menu-item.dto";
 import { UpdateRestaurantDTO } from "./dto/update-restaurant.dto";
 import { RestaurantService } from "./restaurant.service";
 import { OrderPlacementEvent } from "src/events/order/order-placed.event";
+import { JwtAdminGuard } from "src/auth/guards/admin.guard";
 
 @Controller("restaurant")
 export class RestaurantController {
@@ -37,7 +38,7 @@ export class RestaurantController {
     }
 
     @Post("create")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async createRestaurant(@Body() createDto: CreateRestaurantDTO) {
         const restaurant = await this.restaurantService.createRestaurant(createDto);
@@ -45,7 +46,7 @@ export class RestaurantController {
     }
 
     @Put("update/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async updateRestaurant(
         @Param("id", UuidValidationPipe) id: string,
@@ -56,7 +57,7 @@ export class RestaurantController {
     }
 
     @Delete("delete/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(RolesGuard, JwtAdminGuard)
     @Roles(ROLES.ADMIN)
     async removeRestaurant(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.restaurantService.removeRestaurant(id);
@@ -64,7 +65,7 @@ export class RestaurantController {
     }
 
     @Patch("toggle-active/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async toggleRestaurantActive(@Param("id", UuidValidationPipe) id: string) {
         const restaurant = await this.restaurantService.toggleRestaurantActive(id);
@@ -72,7 +73,7 @@ export class RestaurantController {
     }
 
     @Post("upload-logo/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     @UseInterceptors(FileInterceptor('file'))
     async uploadRestaurantLogo(
@@ -84,7 +85,7 @@ export class RestaurantController {
     }
 
     @Post("upload-banner/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     @UseInterceptors(FileInterceptor('file'))
     async uploadRestaurantBanner(
@@ -119,7 +120,7 @@ export class RestaurantController {
     }
 
     @Post(":restaurantId/menu/create")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async createMenuItem(
         @Param("restaurantId", UuidValidationPipe) restaurantId: string,
@@ -130,7 +131,7 @@ export class RestaurantController {
     }
 
     @Put("menu/update/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async updateMenuItem(
         @Param("id", UuidValidationPipe) id: string,
@@ -141,7 +142,7 @@ export class RestaurantController {
     }
 
     @Delete("menu/delete/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async removeMenuItem(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.restaurantService.remove(id);
@@ -149,7 +150,7 @@ export class RestaurantController {
     }
 
     @Patch("menu/toggle-availability/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async toggleMenuItemAvailability(@Param("id", UuidValidationPipe) id: string) {
         const menuItem = await this.restaurantService.toggleAvailability(id);
@@ -157,7 +158,7 @@ export class RestaurantController {
     }
 
     @Post("menu/upload-image/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     @UseInterceptors(FileInterceptor('file'))
     async uploadMenuItemImage(
@@ -169,7 +170,7 @@ export class RestaurantController {
     }
 
     @Patch("mark-ready/:orderId")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async markOrderReady(@Param("orderId", UuidValidationPipe) orderId: string) {
         await this.restaurantService.markOrderReady(orderId);

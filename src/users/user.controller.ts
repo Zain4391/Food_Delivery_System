@@ -29,49 +29,56 @@ export class CustomerController {
         return new ApiSuccessResponse(customer, "Customer Profile retrieved successfully", HttpStatus.OK);
     }
 
-    @Get("admin/profile")
+    @Get("/admin/profile")
     @UseGuards(JwtAdminGuard)
     getAdminProfile(@CurrentUser() admin: AuthenticatedUser) {
         return new ApiSuccessResponse(admin, "Admin Profile retrieved successfully", HttpStatus.OK);
     }
 
     @Get("all")
-    @UseGuards(RolesGuard, JwtAdminGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findAllCustomers(@Query() query: CustomerPaginationDTO) {
         return new ApiSuccessResponse(await this.customerService.findAll(query), "Restaurant created successfully", HttpStatus.OK);
     }
 
     @Get(":id")
-    @UseGuards(RolesGuard, JwtAdminGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findOneById(@Param('id', UuidValidationPipe) id: string) {
         return new ApiSuccessResponse(await this.customerService.findById(id), "User found successfully", HttpStatus.OK);
     }
 
     @Get("/email/:email")
-    @UseGuards(RolesGuard, JwtAdminGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findByEmail(@Param('email') email: string) {
         return new ApiSuccessResponse(await this.customerService.findByEmail(email), "User found by email successfully", HttpStatus.OK);
     }
 
-    @Get("/orders/:id")
-    @UseGuards(RolesGuard, JwtCustomerGuard)
-    @Roles(ROLES.ADMIN, ROLES.CUSTOMER)
+    @Get("admin/orders/:id")
+    @UseGuards(JwtCustomerGuard, RolesGuard)
+    @Roles(ROLES.CUSTOMER)
     async findUserOrders(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
         return new ApiSuccessResponse(await this.customerService.findUserOrders(id, query), "User orders retrieved successfully", HttpStatus.OK);
     }
 
+    @Get("/orders/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findUserOrdersAdmin(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
+        return new ApiSuccessResponse(await this.customerService.findUserOrders(id, query), "User orders retrieved successfully", HttpStatus.OK);
+    }
+
     @Put("/update/:id")
-    @UseGuards(JwtCustomerGuard)
+    @UseGuards(JwtCustomerGuard, RolesGuard)
     @Roles(ROLES.CUSTOMER)
     async updateUser(@Param("id", UuidValidationPipe) id: string, @Body() updateDto: UpdateCustomerDTO) {
         return new ApiSuccessResponse(await this.customerService.update(updateDto, id), "User updated successfully", HttpStatus.OK);
     }
 
     @Put("/update-password/:id")
-    @UseGuards(JwtCustomerGuard)
+    @UseGuards(JwtCustomerGuard, RolesGuard)
     @Roles(ROLES.CUSTOMER)
     async updatePassword(@Param("id", UuidValidationPipe) id: string, @Body() updateDto: UpdatePasswordDTO) {
         const message = await this.customerService.updatePassword(updateDto, id);
@@ -85,7 +92,7 @@ export class CustomerController {
     }
 
     @Post("/upload-profile-image/:id")
-    @UseGuards(JwtCustomerGuard)
+    @UseGuards(JwtCustomerGuard, RolesGuard)
     @Roles(ROLES.CUSTOMER)
     @UseInterceptors(FileInterceptor('file'))
     async uploadProfileImage(
@@ -97,7 +104,7 @@ export class CustomerController {
     }
 
     @Delete("/delete/:id")
-    @UseGuards(RolesGuard, JwtAdminGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async deleteCustomer(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.customerService.remove(id);
