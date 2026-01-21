@@ -12,6 +12,7 @@ import { DeliveryPaginationDTO } from "./dtos/delivery-pagination.dto";
 import { UpdateDeliveryDTO } from "./dtos/update-delivery.dto";
 import { OrderReadyEvent } from "src/events/restaurant/order-ready.event";
 import { OrderPickedUpEvent } from "../events/delivery/order-pickup.event";
+import { JwtAdminGuard } from "src/auth/guards/admin.guard";
 
 @Controller("delivery")
 export class DeliveryController {
@@ -23,28 +24,42 @@ export class DeliveryController {
     ) {} 
 
     @Get("all")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findAllDeliveries(@Query() query: DeliveryPaginationDTO) {
         return new ApiSuccessResponse(await this.deliveryService.findAll(query), "All deliveries found", HttpStatus.OK);
     }
 
+    @Get("admin/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findDeliveryByIdAdmin(@Param("id", UuidValidationPipe) id: string) {
+        return new ApiSuccessResponse(await this.deliveryService.findById(id), "Delivery found", HttpStatus.OK);
+    }
+
     @Get(":id")
-    @UseGuards(RolesGuard, JwtDriverGuard)
-    @Roles(ROLES.ADMIN, ROLES.DRIVER)
+    @UseGuards(JwtDriverGuard, RolesGuard)
+    @Roles(ROLES.DRIVER)
     async findDeliveryById(@Param("id", UuidValidationPipe) id: string) {
         return new ApiSuccessResponse(await this.deliveryService.findById(id), "Delivery found", HttpStatus.OK);
     }
 
-    @Get("order/:orderId")
-    @UseGuards(RolesGuard, JwtDriverGuard)
-    @Roles(ROLES.ADMIN, ROLES.DRIVER)
+    @Get("admin/order/:orderId")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findDeliveryByOrderIdAdmin(@Param("orderId", UuidValidationPipe) orderId: string) {
+        return new ApiSuccessResponse(await this.deliveryService.findByOrderId(orderId), `Delivries by driver ${orderId} found`, HttpStatus.OK);
+    }
+
+    @Get("/order/:orderId")
+    @UseGuards(JwtDriverGuard, RolesGuard)
+    @Roles(ROLES.DRIVER)
     async findDeliveryByOrderId(@Param("orderId", UuidValidationPipe) orderId: string) {
         return new ApiSuccessResponse(await this.deliveryService.findByOrderId(orderId), `Delivries by driver ${orderId} found`, HttpStatus.OK);
     }
 
     @Post("create")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async createDelivery(@Body() createDto: CreateDeliveryDTO) {
         const delivery = await this.deliveryService.create(createDto);
@@ -52,7 +67,7 @@ export class DeliveryController {
     }
 
     @Put("update/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async updateDelivery(
         @Param("id", UuidValidationPipe) id: string,
@@ -63,7 +78,7 @@ export class DeliveryController {
     }
 
     @Patch("mark-picked-up/:id")
-    @UseGuards(JwtDriverGuard)
+    @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async markAsPickedUp(@Param("id", UuidValidationPipe) id: string) {
         const delivery = await this.deliveryService.markAsPickedUp(id);
@@ -71,7 +86,7 @@ export class DeliveryController {
     }
 
     @Patch("mark-delivered/:id")
-    @UseGuards(JwtDriverGuard)
+    @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async markAsDelivered(@Param("id", UuidValidationPipe) id: string) {
         const delivery = await this.deliveryService.markAsDelivered(id);
@@ -79,7 +94,7 @@ export class DeliveryController {
     }
 
     @Delete("delete/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async removeDelivery(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.deliveryService.remove(id);
