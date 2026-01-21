@@ -15,6 +15,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { UpdatePasswordDTO } from "./dtos/update-password.dto";
 import { OrderPaginationDTO } from "src/orders/dto/order-pagination.dto";
 import { VEHICLE_TYPE } from "./entities/driver.entity";
+import { JwtAdminGuard } from "src/auth/guards/admin.guard";
 
 @Controller("driver")
 export class DriverController {
@@ -24,55 +25,76 @@ export class DriverController {
     ) {}
 
     @Get("profile")
-    @UseGuards(JwtDriverGuard)
+    @UseGuards(JwtDriverGuard, RolesGuard)
     getDriverProfile( @CurrentUser() driver: AuthenticatedUser) {
         return new ApiSuccessResponse(driver, "Driver Profile retrieved successfully", HttpStatus.OK);
     }
 
     @Get("all")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findAllDrivers(@Query() query: DriverPaginationDTO) {
         return new ApiSuccessResponse(await this.driverService.findAll(query), "Drivers found Successfully", HttpStatus.OK);
     }
 
     @Get(":id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findOneById(@Param("id", UuidValidationPipe) id: string) {
         return new ApiSuccessResponse(await this.driverService.findById(id), "Driver found successfully", HttpStatus.OK);
     }
 
     @Get(":email")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findByEmail(@Param("email") email: string) {
         return new ApiSuccessResponse(await this.driverService.findByEmail(email), "Driver with email found", HttpStatus.OK);
     }
 
+    @Get("admin/orders/delivered/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findDeliveredOrdersAdmin(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
+        return new ApiSuccessResponse(await this.driverService.findDeliveredOrders(id, query), `Delivered Orders for driver ${id} found`, HttpStatus.OK);
+    }
+
     @Get("/orders/delivered/:id")
-    @UseGuards(RolesGuard, JwtDriverGuard)
-    @Roles(ROLES.ADMIN, ROLES.DRIVER)
+    @UseGuards(JwtDriverGuard, RolesGuard)
+    @Roles(ROLES.DRIVER)
     async findDeliveredOrders(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
         return new ApiSuccessResponse(await this.driverService.findDeliveredOrders(id, query), `Delivered Orders for driver ${id} found`, HttpStatus.OK);
     }
 
+    @Get("admin/orders/pending/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findPendingOrdersAdmin(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
+        return new ApiSuccessResponse(await this.driverService.findPendingOrders(id, query), `Pending orders for driver ${id} found`, HttpStatus.OK);
+    }
+
     @Get("/orders/pending/:id")
-    @UseGuards(RolesGuard, JwtDriverGuard)
-    @Roles(ROLES.ADMIN, ROLES.DRIVER)
+    @UseGuards(JwtDriverGuard, RolesGuard)
+    @Roles(ROLES.DRIVER)
     async findPendingOrders(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
         return new ApiSuccessResponse(await this.driverService.findPendingOrders(id, query), `Pending orders for driver ${id} found`, HttpStatus.OK);
     }
 
+    @Get("admin/orders/all/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findAllDriverOrdersAdmin(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
+        return new ApiSuccessResponse(await this.driverService.findAllDriverOrders(id, query), `All orders for driver ${id} found`, HttpStatus.OK);
+    }
+
     @Get("/orders/all/:id")
-    @UseGuards(RolesGuard, JwtDriverGuard)
-    @Roles(ROLES.ADMIN, ROLES.DRIVER)
+    @UseGuards(JwtDriverGuard, RolesGuard)
+    @Roles(ROLES.DRIVER)
     async findAllDriverOrders(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
         return new ApiSuccessResponse(await this.driverService.findAllDriverOrders(id, query), `All orders for driver ${id} found`, HttpStatus.OK);
     }
 
     @Put("/update/:id")
-    @UseGuards(JwtDriverGuard)
+    @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async updateDriver(@Param('id', UuidValidationPipe) id: string, @Body() updateDto: UpdateDriverDTO) {
         const driver = await this.driverService.update(updateDto, id);
@@ -86,7 +108,7 @@ export class DriverController {
     }
 
     @Put("/update-password/:id")
-    @UseGuards(JwtDriverGuard)
+    @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async updatePassword(@Param("id", UuidValidationPipe) id: string, @Body() updateDto: UpdatePasswordDTO) {
         const message = await this.driverService.updatePassword(updateDto, id);
@@ -94,7 +116,7 @@ export class DriverController {
     }
 
     @Post("/upload-profile-image/:id")
-    @UseGuards(JwtDriverGuard)
+    @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     @UseInterceptors(FileInterceptor('file'))
     async uploadProfileImage(
@@ -106,7 +128,7 @@ export class DriverController {
     }
 
     @Patch("/change-vehicle/:id")
-    @UseGuards(JwtDriverGuard)
+    @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async changeVehicle(
         @Param('id', UuidValidationPipe) id: string,
@@ -117,7 +139,7 @@ export class DriverController {
     }
 
     @Patch("/toggle-availability/:id")
-    @UseGuards(JwtDriverGuard)
+    @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async toggleAvailability(@Param('id', UuidValidationPipe) id: string) {
         const driver = await this.driverService.toggleAvailability(id);
@@ -125,7 +147,7 @@ export class DriverController {
     }
 
     @Delete("/delete/:id")
-    @UseGuards(RolesGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async deleteDriver(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.driverService.remove(id);
