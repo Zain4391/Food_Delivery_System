@@ -1,0 +1,7 @@
+{
+  "name": "Jane Driver",
+  "email": "driver@example.com",
+  "password": "password123",
+  "phone": "12345678901",
+  "vehicle_type": "bike"
+}

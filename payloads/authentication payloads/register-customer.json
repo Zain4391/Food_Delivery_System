@@ -1,0 +1,7 @@
+{
+  "name": "John Doe",
+  "email": "customer@example.com",
+  "password": "password123",
+  "address": "123 Main Street, City, State 12345",
+  "role": "customer"
+}

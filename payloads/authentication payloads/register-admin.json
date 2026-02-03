@@ -1,0 +1,6 @@
+{
+  "name": "Admin User",
+  "email": "admin@example.com",
+  "password": "password123",
+  "address": "456 Admin Ave, City, State 12345"
+}
