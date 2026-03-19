@@ -23,13 +23,15 @@ export class CustomerController {
         private readonly customerService: CustomerService
     ) {}
 
+    // ── Static routes first ────────────────────────────────────────────────
+
     @Get("profile")
     @UseGuards(JwtCustomerGuard)
     getCustomerProfile(@CurrentUser() customer: AuthenticatedUser) {
         return new ApiSuccessResponse(customer, "Customer Profile retrieved successfully", HttpStatus.OK);
     }
 
-    @Get("/admin/profile")
+    @Get("admin/profile")
     @UseGuards(JwtAdminGuard)
     getAdminProfile(@CurrentUser() admin: AuthenticatedUser) {
         return new ApiSuccessResponse(admin, "Admin Profile retrieved successfully", HttpStatus.OK);
@@ -39,22 +41,10 @@ export class CustomerController {
     @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findAllCustomers(@Query() query: CustomerPaginationDTO) {
-        return new ApiSuccessResponse(await this.customerService.findAll(query), "Restaurant created successfully", HttpStatus.OK);
+        return new ApiSuccessResponse(await this.customerService.findAll(query), "Customers retrieved successfully", HttpStatus.OK);
     }
 
-    @Get(":id")
-    @UseGuards(JwtAdminGuard, RolesGuard)
-    @Roles(ROLES.ADMIN)
-    async findOneById(@Param('id', UuidValidationPipe) id: string) {
-        return new ApiSuccessResponse(await this.customerService.findById(id), "User found successfully", HttpStatus.OK);
-    }
-
-    @Get("/email/:email")
-    @UseGuards(JwtAdminGuard, RolesGuard)
-    @Roles(ROLES.ADMIN)
-    async findByEmail(@Param('email') email: string) {
-        return new ApiSuccessResponse(await this.customerService.findByEmail(email), "User found by email successfully", HttpStatus.OK);
-    }
+    // ── Prefixed param routes ──────────────────────────────────────────────
 
     @Get("admin/orders/:id")
     @UseGuards(JwtCustomerGuard, RolesGuard)
@@ -63,21 +53,28 @@ export class CustomerController {
         return new ApiSuccessResponse(await this.customerService.findUserOrders(id, query), "User orders retrieved successfully", HttpStatus.OK);
     }
 
-    @Get("/orders/:id")
+    @Get("orders/:id")
     @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findUserOrdersAdmin(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
         return new ApiSuccessResponse(await this.customerService.findUserOrders(id, query), "User orders retrieved successfully", HttpStatus.OK);
     }
 
-    @Put("/update/:id")
+    @Get("email/:email")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findByEmail(@Param('email') email: string) {
+        return new ApiSuccessResponse(await this.customerService.findByEmail(email), "User found by email successfully", HttpStatus.OK);
+    }
+
+    @Put("update/:id")
     @UseGuards(JwtCustomerGuard, RolesGuard)
     @Roles(ROLES.CUSTOMER)
     async updateUser(@Param("id", UuidValidationPipe) id: string, @Body() updateDto: UpdateCustomerDTO) {
         return new ApiSuccessResponse(await this.customerService.update(updateDto, id), "User updated successfully", HttpStatus.OK);
     }
 
-    @Put("/update-password/:id")
+    @Put("update-password/:id")
     @UseGuards(JwtCustomerGuard, RolesGuard)
     @Roles(ROLES.CUSTOMER)
     async updatePassword(@Param("id", UuidValidationPipe) id: string, @Body() updateDto: UpdatePasswordDTO) {
@@ -85,13 +82,13 @@ export class CustomerController {
         return new ApiSuccessResponse([], message, HttpStatus.OK);
     }
 
-    @Post("/forgot-password")
+    @Post("forgot-password")
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDTO) {
         const message = await this.customerService.forgotPassword(forgotPasswordDto);
         return new ApiSuccessResponse([], message, HttpStatus.OK);
     }
 
-    @Post("/upload-profile-image/:id")
+    @Post("upload-profile-image/:id")
     @UseGuards(JwtCustomerGuard, RolesGuard)
     @Roles(ROLES.CUSTOMER)
     @UseInterceptors(FileInterceptor('file'))
@@ -103,11 +100,20 @@ export class CustomerController {
         return new ApiSuccessResponse(customer, "Profile image uploaded successfully", HttpStatus.OK);
     }
 
-    @Delete("/delete/:id")
+    @Delete("delete/:id")
     @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async deleteCustomer(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.customerService.remove(id);
         return new ApiSuccessResponse(null, message, HttpStatus.NO_CONTENT);
+    }
+
+    // ── Bare :id route last ────────────────────────────────────────────────
+
+    @Get(":id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findOneById(@Param('id', UuidValidationPipe) id: string) {
+        return new ApiSuccessResponse(await this.customerService.findById(id), "User found successfully", HttpStatus.OK);
     }
 }

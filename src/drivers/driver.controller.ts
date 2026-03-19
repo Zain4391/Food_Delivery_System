@@ -24,9 +24,11 @@ export class DriverController {
         private readonly driverService: DriverService
     ) {}
 
+    // ── Static routes first ────────────────────────────────────────────────
+
     @Get("profile")
     @UseGuards(JwtDriverGuard, RolesGuard)
-    getDriverProfile( @CurrentUser() driver: AuthenticatedUser) {
+    getDriverProfile(@CurrentUser() driver: AuthenticatedUser) {
         return new ApiSuccessResponse(driver, "Driver Profile retrieved successfully", HttpStatus.OK);
     }
 
@@ -37,31 +39,12 @@ export class DriverController {
         return new ApiSuccessResponse(await this.driverService.findAll(query), "Drivers found Successfully", HttpStatus.OK);
     }
 
-    @Get(":id")
-    @UseGuards(JwtAdminGuard, RolesGuard)
-    @Roles(ROLES.ADMIN)
-    async findOneById(@Param("id", UuidValidationPipe) id: string) {
-        return new ApiSuccessResponse(await this.driverService.findById(id), "Driver found successfully", HttpStatus.OK);
-    }
-
-    @Get(":email")
-    @UseGuards(JwtAdminGuard, RolesGuard)
-    @Roles(ROLES.ADMIN)
-    async findByEmail(@Param("email") email: string) {
-        return new ApiSuccessResponse(await this.driverService.findByEmail(email), "Driver with email found", HttpStatus.OK);
-    }
+    // ── Admin prefixed routes ──────────────────────────────────────────────
 
     @Get("admin/orders/delivered/:id")
     @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findDeliveredOrdersAdmin(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
-        return new ApiSuccessResponse(await this.driverService.findDeliveredOrders(id, query), `Delivered Orders for driver ${id} found`, HttpStatus.OK);
-    }
-
-    @Get("/orders/delivered/:id")
-    @UseGuards(JwtDriverGuard, RolesGuard)
-    @Roles(ROLES.DRIVER)
-    async findDeliveredOrders(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
         return new ApiSuccessResponse(await this.driverService.findDeliveredOrders(id, query), `Delivered Orders for driver ${id} found`, HttpStatus.OK);
     }
 
@@ -72,13 +55,6 @@ export class DriverController {
         return new ApiSuccessResponse(await this.driverService.findPendingOrders(id, query), `Pending orders for driver ${id} found`, HttpStatus.OK);
     }
 
-    @Get("/orders/pending/:id")
-    @UseGuards(JwtDriverGuard, RolesGuard)
-    @Roles(ROLES.DRIVER)
-    async findPendingOrders(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
-        return new ApiSuccessResponse(await this.driverService.findPendingOrders(id, query), `Pending orders for driver ${id} found`, HttpStatus.OK);
-    }
-
     @Get("admin/orders/all/:id")
     @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
@@ -86,14 +62,30 @@ export class DriverController {
         return new ApiSuccessResponse(await this.driverService.findAllDriverOrders(id, query), `All orders for driver ${id} found`, HttpStatus.OK);
     }
 
-    @Get("/orders/all/:id")
+    // ── Driver prefixed routes ─────────────────────────────────────────────
+
+    @Get("orders/delivered/:id")
+    @UseGuards(JwtDriverGuard, RolesGuard)
+    @Roles(ROLES.DRIVER)
+    async findDeliveredOrders(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
+        return new ApiSuccessResponse(await this.driverService.findDeliveredOrders(id, query), `Delivered Orders for driver ${id} found`, HttpStatus.OK);
+    }
+
+    @Get("orders/pending/:id")
+    @UseGuards(JwtDriverGuard, RolesGuard)
+    @Roles(ROLES.DRIVER)
+    async findPendingOrders(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
+        return new ApiSuccessResponse(await this.driverService.findPendingOrders(id, query), `Pending orders for driver ${id} found`, HttpStatus.OK);
+    }
+
+    @Get("orders/all/:id")
     @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async findAllDriverOrders(@Param("id", UuidValidationPipe) id: string, @Query() query: OrderPaginationDTO) {
         return new ApiSuccessResponse(await this.driverService.findAllDriverOrders(id, query), `All orders for driver ${id} found`, HttpStatus.OK);
     }
 
-    @Put("/update/:id")
+    @Put("update/:id")
     @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async updateDriver(@Param('id', UuidValidationPipe) id: string, @Body() updateDto: UpdateDriverDTO) {
@@ -101,13 +93,13 @@ export class DriverController {
         return new ApiSuccessResponse(driver, "Driver updated successfully", HttpStatus.OK);
     }
 
-    @Post("/forgot-password")
+    @Post("forgot-password")
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDTO) {
         const message = await this.driverService.forgotPassword(forgotPasswordDto);
         return new ApiSuccessResponse([], message, HttpStatus.OK);
     }
 
-    @Put("/update-password/:id")
+    @Put("update-password/:id")
     @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async updatePassword(@Param("id", UuidValidationPipe) id: string, @Body() updateDto: UpdatePasswordDTO) {
@@ -115,7 +107,7 @@ export class DriverController {
         return new ApiSuccessResponse([], message, HttpStatus.OK);
     }
 
-    @Post("/upload-profile-image/:id")
+    @Post("upload-profile-image/:id")
     @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     @UseInterceptors(FileInterceptor('file'))
@@ -127,7 +119,7 @@ export class DriverController {
         return new ApiSuccessResponse(driver, "Profile image uploaded successfully", HttpStatus.OK);
     }
 
-    @Patch("/change-vehicle/:id")
+    @Patch("change-vehicle/:id")
     @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async changeVehicle(
@@ -138,7 +130,7 @@ export class DriverController {
         return new ApiSuccessResponse(driver, "Vehicle type updated successfully", HttpStatus.OK);
     }
 
-    @Patch("/toggle-availability/:id")
+    @Patch("toggle-availability/:id")
     @UseGuards(JwtDriverGuard, RolesGuard)
     @Roles(ROLES.DRIVER)
     async toggleAvailability(@Param('id', UuidValidationPipe) id: string) {
@@ -146,11 +138,20 @@ export class DriverController {
         return new ApiSuccessResponse(driver, `Driver is now ${driver.is_available ? 'available' : 'unavailable'}`, HttpStatus.OK);
     }
 
-    @Delete("/delete/:id")
+    @Delete("delete/:id")
     @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async deleteDriver(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.driverService.remove(id);
         return new ApiSuccessResponse(null, message, HttpStatus.NO_CONTENT);
+    }
+
+    // ── Bare :id route last ────────────────────────────────────────────────
+
+    @Get(":id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findOneById(@Param("id", UuidValidationPipe) id: string) {
+        return new ApiSuccessResponse(await this.driverService.findById(id), "Driver found successfully", HttpStatus.OK);
     }
 }
