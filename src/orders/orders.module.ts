@@ -7,6 +7,7 @@ import { Restaurant } from "src/resturants/entities/restaurant.entity";
 import { Customer } from "src/users/entities/user.entity";
 import { DeliveryDriver } from "src/drivers/entities/driver.entity";
 import { OrderService } from "./order.service";
+import { OrderController } from "./order.controller";
 import { RabbitMQModule } from "src/rabbitmq/rabbitmq.module";
 
 @Module({
@@ -15,7 +16,7 @@ import { RabbitMQModule } from "src/rabbitmq/rabbitmq.module";
         RabbitMQModule
     ],
     providers: [OrderService],
-    controllers: [],
+    controllers: [OrderController],
     exports: [OrderService]
 })
 export class OrdersModule {}
