@@ -1,11 +1,14 @@
 import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
+import { Type } from "class-transformer";
 
 export class RestaurantPaginationDTO {
 
+    @Type(() => Number)
     @IsInt()
     @Min(1)
     page: number = 1;
 
+    @Type(() => Number)
     @IsInt()
     @Min(1)
     @Max(100)
@@ -20,11 +23,13 @@ export class RestaurantPaginationDTO {
     cusine_type?: string;
 
     @IsOptional()
+    @Type(() => Number)
     @IsNumber()
     @Min(0)
     minRating?: number;
 
     @IsOptional()
+    @Type(() => Boolean)
     @IsBoolean()
     is_active?: boolean;
 

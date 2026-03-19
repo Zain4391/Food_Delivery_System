@@ -1,12 +1,15 @@
 import { IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from "class-validator";
+import { Type } from "class-transformer";
 import { OrderStatus } from "../entities/order.entity";
 
 export class OrderPaginationDTO {
 
+    @Type(() => Number)
     @IsInt()
     @Min(1)
     page: number = 1;
 
+    @Type(() => Number)
     @IsInt()
     @Min(1)
     @Max(100)
