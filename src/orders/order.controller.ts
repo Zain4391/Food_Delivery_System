@@ -19,8 +19,6 @@ import { DriverAssignedEvent } from "src/events/delivery/driver-assigned.event";
 import { OrderDeliveredEvent } from "src/events/delivery/order-delivered.event";
 import { JwtAdminGuard } from "src/auth/guards/admin.guard";
 
-
-
 @Controller("order")
 export class OrderController {
 
@@ -30,25 +28,13 @@ export class OrderController {
         private readonly orderService: OrderService
     ) {}
 
+    // ── Static routes first ────────────────────────────────────────────────
+
     @Get("all")
     @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async findAllOrders(@Query() query: OrderPaginationDTO) {
         return new ApiSuccessResponse(await this.orderService.findAll(query), "Orders found successfully", HttpStatus.OK);
-    }
-
-    @Get(":id")
-    @UseGuards(JwtCustomerGuard, RolesGuard)
-    @Roles(ROLES.CUSTOMER)
-    async findOrderById(@Param("id", UuidValidationPipe) id: string) {
-        return new ApiSuccessResponse(await this.orderService.findById(id), `Order with ID ${id} found`, HttpStatus.OK);
-    }
-
-    @Get("admin/:id")
-    @UseGuards(JwtAdminGuard, RolesGuard)
-    @Roles(ROLES.ADMIN)
-    async findOrderByIdAdmin(@Param("id", UuidValidationPipe) id: string) {
-        return new ApiSuccessResponse(await this.orderService.findById(id), `Order with ID ${id} found`, HttpStatus.OK);
     }
 
     @Post("create")
@@ -59,15 +45,65 @@ export class OrderController {
         return new ApiSuccessResponse(order, "Order created successfully", HttpStatus.CREATED);
     }
 
-    @Put("update/:id")
+    // ── Admin prefixed routes ──────────────────────────────────────────────
+
+    @Get("admin/:id")
     @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
-    async updateOrder(
-        @Param("id", UuidValidationPipe) id: string,
-        @Body() updateDto: UpdateOrderDTO
+    async findOrderByIdAdmin(@Param("id", UuidValidationPipe) id: string) {
+        return new ApiSuccessResponse(await this.orderService.findById(id), `Order with ID ${id} found`, HttpStatus.OK);
+    }
+
+    @Get("admin/customer/:customerId")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findOrdersByCustomerAdmin(
+        @Param("customerId", UuidValidationPipe) customerId: string,
+        @Query() query: OrderPaginationDTO
     ) {
-        const order = await this.orderService.update(id, updateDto);
-        return new ApiSuccessResponse(order, "Order updated successfully", HttpStatus.OK);
+        return new ApiSuccessResponse(await this.orderService.findByCustomer(customerId, query), `Orders for user: ${customerId} found`, HttpStatus.OK);
+    }
+
+    @Get("admin/driver/:driverId")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findOrdersByDriverAdmin(
+        @Param("driverId", UuidValidationPipe) driverId: string,
+        @Query() query: OrderPaginationDTO
+    ) {
+        return new ApiSuccessResponse(await this.orderService.findByDriver(driverId, query), `Orders for driver ${driverId} found`, HttpStatus.OK);
+    }
+
+    // ── Prefixed param routes ──────────────────────────────────────────────
+
+    @Get("customer/:customerId")
+    @UseGuards(JwtCustomerGuard, RolesGuard)
+    @Roles(ROLES.CUSTOMER)
+    async findOrdersByCustomer(
+        @Param("customerId", UuidValidationPipe) customerId: string,
+        @Query() query: OrderPaginationDTO
+    ) {
+        return new ApiSuccessResponse(await this.orderService.findByCustomer(customerId, query), `Orders for user: ${customerId} found`, HttpStatus.OK);
+    }
+
+    @Get("restaurant/:restaurantId")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async findOrdersByRestaurant(
+        @Param("restaurantId", UuidValidationPipe) restaurantId: string,
+        @Query() query: OrderPaginationDTO
+    ) {
+        return new ApiSuccessResponse(await this.orderService.findByRestaurant(restaurantId, query), `Orders for restaurant ${restaurantId} found`, HttpStatus.OK);
+    }
+
+    @Get("driver/:driverId")
+    @UseGuards(JwtDriverGuard, RolesGuard)
+    @Roles(ROLES.DRIVER)
+    async findOrdersByDriver(
+        @Param("driverId", UuidValidationPipe) driverId: string,
+        @Query() query: OrderPaginationDTO
+    ) {
+        return new ApiSuccessResponse(await this.orderService.findByDriver(driverId, query), `Orders for driver ${driverId} found`, HttpStatus.OK);
     }
 
     @Patch("update-status/:id")
@@ -100,6 +136,17 @@ export class OrderController {
         return new ApiSuccessResponse(order, "Order cancelled successfully", HttpStatus.OK);
     }
 
+    @Put("update/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async updateOrder(
+        @Param("id", UuidValidationPipe) id: string,
+        @Body() updateDto: UpdateOrderDTO
+    ) {
+        const order = await this.orderService.update(id, updateDto);
+        return new ApiSuccessResponse(order, "Order updated successfully", HttpStatus.OK);
+    }
+
     @Delete("delete/:id")
     @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
@@ -108,57 +155,16 @@ export class OrderController {
         return new ApiSuccessResponse([], message, HttpStatus.NO_CONTENT);
     }
 
-    @Get("customer/:customerId")
+    // ── Bare :id route last ────────────────────────────────────────────────
+
+    @Get(":id")
     @UseGuards(JwtCustomerGuard, RolesGuard)
     @Roles(ROLES.CUSTOMER)
-    async findOrdersByCustomer(
-        @Param("customerId", UuidValidationPipe) customerId: string,
-        @Query() query: OrderPaginationDTO
-    ) {
-        return new ApiSuccessResponse(await this.orderService.findByCustomer(customerId, query), `Orders for user: ${customerId} found`, HttpStatus.OK);
+    async findOrderById(@Param("id", UuidValidationPipe) id: string) {
+        return new ApiSuccessResponse(await this.orderService.findById(id), `Order with ID ${id} found`, HttpStatus.OK);
     }
 
-    @Get("admin/customer/:customerId")
-    @UseGuards(JwtAdminGuard, RolesGuard)
-    @Roles(ROLES.ADMIN)
-    async findOrdersByCustomerAdmin(
-        @Param("customerId", UuidValidationPipe) customerId: string,
-        @Query() query: OrderPaginationDTO
-    ) {
-        return new ApiSuccessResponse(await this.orderService.findByCustomer(customerId, query), `Orders for user: ${customerId} found`, HttpStatus.OK);
-    }
-
-    @Get("restaurant/:restaurantId")
-    @UseGuards(JwtAdminGuard, RolesGuard)
-    @Roles(ROLES.ADMIN)
-    async findOrdersByRestaurant(
-        @Param("restaurantId", UuidValidationPipe) restaurantId: string,
-        @Query() query: OrderPaginationDTO
-    ) {
-        return new ApiSuccessResponse(await this.orderService.findByRestaurant(restaurantId, query), `Orders for restaurant ${restaurantId} found`, HttpStatus.OK);
-    }
-
-    @Get("driver/:driverId")
-    @UseGuards(JwtDriverGuard, RolesGuard)
-    @Roles(ROLES.DRIVER)
-    async findOrdersByDriver(
-        @Param("driverId", UuidValidationPipe) driverId: string,
-        @Query() query: OrderPaginationDTO
-    ) {
-        return new ApiSuccessResponse(await this.orderService.findByDriver(driverId, query), `Orders for driver ${driverId} found`, HttpStatus.OK);
-    }
-
-    @Get("admin/driver/:driverId")
-    @UseGuards(JwtAdminGuard, RolesGuard)
-    @Roles(ROLES.ADMIN)
-    async findOrdersByDriverAdmin(
-        @Param("driverId", UuidValidationPipe) driverId: string,
-        @Query() query: OrderPaginationDTO
-    ) {
-        return new ApiSuccessResponse(await this.orderService.findByDriver(driverId, query), `Orders for driver ${driverId} found`, HttpStatus.OK);
-    }
-
-    // ========== Event Handlers ==========
+    // ── Event Handlers ────────────────────────────────────────────────────
 
     @EventPattern('order.confirmed')
     async handleOrderConfirmed(@Payload() data: OrderConfirmedEvent) {
