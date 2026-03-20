@@ -1,23 +1,8 @@
-# Food Delivery Application
+# Food Delivery Application — Backend
 
-A modern food delivery platform built with NestJS, TypeScript, TypeORM, and PostgreSQL. This application manages customers, restaurants, menu items, orders, deliveries, and delivery drivers.
+A full-featured food delivery backend built with NestJS, TypeScript, TypeORM, and PostgreSQL. Discovered and fixed while building the frontend in March 2026 — see the [Bug Fixes & Lessons Learned](#bug-fixes--lessons-learned) section.
 
-## Description
-
-This is a full-featured food delivery backend system built with [NestJS](https://github.com/nestjs/nest) framework. It provides RESTful APIs for managing the entire food delivery workflow from ordering to delivery tracking.
-
-## Features
-
-- 👥 **Customer Management** - User registration, authentication, profile management, and order history
-- 🍽️ **Restaurant Management** - Restaurant profiles, menu management, and availability control
-- 📋 **Menu Items** - Categorized food items with pricing, images, and real-time availability
-- 🛒 **Order Processing** - Complete order lifecycle from placement to delivery with status tracking
-- 🚚 **Delivery Tracking** - Real-time delivery status updates and timestamp tracking
-- 🏍️ **Driver Management** - Delivery driver profiles, vehicle management, and availability toggle
-- 🔐 **Authentication** - Role-based JWT authentication (Customer, Driver, Admin)
-- 📁 **File Upload** - Profile images, menu item images, restaurant logos and banners via Supabase Storage
-- 🐰 **Event-Driven** - RabbitMQ integration for asynchronous messaging
-- 🎯 **Consistent API Responses** - Standardized success and error response structures
+---
 
 ## Tech Stack
 
@@ -25,488 +10,377 @@ This is a full-featured food delivery backend system built with [NestJS](https:/
 - **Language:** TypeScript
 - **Database:** PostgreSQL (Supabase)
 - **ORM:** TypeORM
-- **Authentication:** JWT, Passport (Customer & Driver strategies)
+- **Authentication:** JWT, Passport (separate strategies for Customer, Driver, Admin)
 - **Message Queue:** RabbitMQ
 - **File Storage:** Supabase Storage
 - **Validation:** class-validator, class-transformer
-- **Code Quality:** ESLint, Prettier
 
-## Database Schema
+---
 
-The application includes the following entities:
+## Features
 
-- **Customers** - User accounts and profiles
-- **Restaurants** - Restaurant information and locations
-- **Menu Items** - Food items with categories (appetizer, main, dessert, beverage)
-- **Orders** - Order details with status tracking (pending, confirmed, preparing, ready, picked_up, delivered, cancelled)
-- **Order Items** - Individual items within an order
-- **Delivery Drivers** - Driver profiles with vehicle information
-- **Deliveries** - Delivery tracking and status
+- 👥 **Customer Management** — registration, auth, profile, order history
+- 🍽️ **Restaurant Management** — profiles, menus, availability
+- 📋 **Menu Items** — categories, pricing, images, availability toggle
+- 🛒 **Order Processing** — full lifecycle with status tracking
+- 🚚 **Delivery Tracking** — real-time status, timestamps
+- 🏍️ **Driver Management** — profiles, vehicle management, availability toggle
+- 🔐 **Auth** — role-based JWT (Customer / Driver / Admin) with separate secrets
+- 📁 **File Upload** — profile images, menu images, restaurant logos via Supabase Storage
+- 🐰 **Event-Driven** — RabbitMQ for async order → restaurant → delivery flow
+
+---
 
 ## Prerequisites
 
-Before running this application, make sure you have:
+- Node.js v18+
+- PostgreSQL (or Supabase account)
+- RabbitMQ (optional — needed for the event-driven order flow)
 
-- Node.js (v18 or higher)
-- npm or yarn
-- PostgreSQL database (or Supabase account)
-- RabbitMQ server (optional, for event-driven features)
+---
 
 ## Environment Variables
 
-Create a `.env` file in the root directory with the following variables:
+Create a `.env` file:
 
 ```env
-# Database Configuration
+# Database
 DATABASE_URL=postgresql://username:password@host:port/database
 MIGRATION_URL=postgresql://username:password@host:port/database
 DB_SSL=false
 
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-this
+# JWT — three separate secrets, one per role
+JWT_SECRET=your-super-secret-jwt-key
 JWT_CUSTOMER_SECRET=your-customer-jwt-secret
 JWT_DRIVER_SECRET=your-driver-jwt-secret
 
-# Supabase Configuration
+# Supabase
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-supabase-anon-key
 
-# RabbitMQ Configuration
+# RabbitMQ
 RABBITMQ_URL=amqp://localhost:5672
 RABBITMQ_QUEUE=main_queue
 
-# Environment
 NODE_ENV=development
 ```
 
-## Project setup
+---
+
+## Setup
 
 ```bash
-# Install dependencies
-$ npm install
-```
-
-## Database Migrations
-
-```bash
-# Generate a new migration
-$ npm run migration:generate src/migrations/MigrationName
+npm install
 
 # Run migrations
-$ npm run migration:run
+npm run migration:run
 
-# Revert last migration
-$ npm run migration:revert
+# Development
+npm run start:dev
+
+# Production
+npm run build && npm run start:prod
 ```
 
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
+---
 
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/register/customer` - Register a new customer
-- `POST /auth/register/driver` - Register a new driver
-- `POST /auth/login/customer` - Customer login
-- `POST /auth/login/driver` - Driver login
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| POST | `/api/auth/customer/register` | Public | Register customer |
+| POST | `/api/auth/driver/register` | Public | Register driver |
+| POST | `/api/auth/admin/register` | Public | Register admin |
+| POST | `/api/auth/customer/login` | Public | Customer login |
+| POST | `/api/auth/driver/login` | Public | Driver login |
+| POST | `/api/auth/admin/login` | Public | Admin login |
 
 ### Customer Management
-- `GET /customer/profile` - Get customer profile (Customer)
-- `GET /customer/all` - Get all customers with pagination (Admin)
-- `GET /customer/:id` - Get customer by ID (Admin)
-- `GET /customer/:email` - Get customer by email (Admin)
-- `GET /customer/orders/:id` - Get customer orders (Customer/Admin)
-- `PUT /customer/update/:id` - Update customer profile (Customer)
-- `PUT /customer/update-password/:id` - Update customer password (Customer)
-- `POST /customer/forgot-password` - Reset customer password
-- `POST /customer/upload-profile-image/:id` - Upload profile image (Customer)
-- `DELETE /customer/delete/:id` - Delete customer (Admin)
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/customer/profile` | Customer | Own profile (from JWT strategy) |
+| GET | `/customer/admin/profile` | Admin | Admin's own profile (from JWT strategy) |
+| GET | `/customer/all` | Admin | All customers (paginated) |
+| GET | `/customer/:id` | Admin | Customer by ID |
+| GET | `/customer/email/:email` | Admin | Customer by email |
+| GET | `/customer/admin/orders/:id` | Customer | Own orders — **note: prefixed with admin/ historically** |
+| GET | `/customer/orders/:id` | Admin | Customer orders (admin view) |
+| PUT | `/customer/update/:id` | Customer | Update own profile |
+| PUT | `/customer/update-password/:id` | Customer | Change password |
+| PUT | `/customer/admin/update/:id` | Admin | Admin updates own profile |
+| PUT | `/customer/admin/update-password/:id` | Admin | Admin changes own password |
+| POST | `/customer/upload-profile-image/:id` | Customer | Upload profile picture |
+| POST | `/customer/admin/upload-profile-image/:id` | Admin | Admin uploads profile picture |
+| POST | `/customer/forgot-password` | Public | Reset password |
+| DELETE | `/customer/delete/:id` | Admin | Delete customer |
 
 ### Driver Management
-- `GET /driver/profile` - Get driver profile (Driver)
-- `GET /driver/all` - Get all drivers with pagination (Admin)
-- `GET /driver/:id` - Get driver by ID (Admin)
-- `GET /driver/:email` - Get driver by email (Admin)
-- `GET /driver/orders/delivered/:id` - Get delivered orders (Driver/Admin)
-- `GET /driver/orders/pending/:id` - Get pending orders (Driver/Admin)
-- `GET /driver/orders/all/:id` - Get all driver orders (Driver/Admin)
-- `PUT /driver/update/:id` - Update driver profile (Driver)
-- `PUT /driver/update-password/:id` - Update driver password (Driver)
-- `POST /driver/forgot-password` - Reset driver password
-- `POST /driver/upload-profile-image/:id` - Upload profile image (Driver)
-- `PATCH /driver/change-vehicle/:id` - Change vehicle type (Driver)
-- `PATCH /driver/toggle-availability/:id` - Toggle availability status (Driver)
-- `DELETE /driver/delete/:id` - Delete driver (Admin)
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/driver/profile` | Driver | Own profile (from JWT strategy) |
+| GET | `/driver/all` | Admin | All drivers (paginated) |
+| GET | `/driver/:id` | Admin | Driver by ID |
+| GET | `/driver/orders/all/:id` | Driver | Own all orders |
+| GET | `/driver/orders/delivered/:id` | Driver | Delivered orders |
+| GET | `/driver/orders/pending/:id` | Driver | Pending orders |
+| GET | `/driver/admin/orders/all/:id` | Admin | Driver orders (admin view) |
+| PUT | `/driver/update/:id` | Driver | Update own profile |
+| PUT | `/driver/update-password/:id` | Driver | Change password |
+| POST | `/driver/upload-profile-image/:id` | Driver | Upload profile picture |
+| POST | `/driver/forgot-password` | Public | Reset password |
+| PATCH | `/driver/change-vehicle/:id` | Driver | Change vehicle type |
+| PATCH | `/driver/toggle-availability/:id` | Driver | Toggle availability |
+| DELETE | `/driver/delete/:id` | Admin | Delete driver |
 
 ### Restaurant Management
-- `GET /restaurant/all` - Get all restaurants with filtering
-- `GET /restaurant/:id` - Get restaurant by ID
-- `POST /restaurant/create` - Create new restaurant (Admin)
-- `PUT /restaurant/update/:id` - Update restaurant (Admin)
-- `DELETE /restaurant/delete/:id` - Delete restaurant (Admin)
-- `PATCH /restaurant/toggle-active/:id` - Toggle restaurant active status (Admin)
-- `POST /restaurant/upload-logo/:id` - Upload restaurant logo (Admin)
-- `POST /restaurant/upload-banner/:id` - Upload restaurant banner (Admin)
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/restaurant/all` | Public | All restaurants (paginated/filtered) |
+| GET | `/restaurant/:id` | Public | Restaurant by ID |
+| POST | `/restaurant/create` | Admin | Create restaurant |
+| PUT | `/restaurant/update/:id` | Admin | Update restaurant |
+| DELETE | `/restaurant/delete/:id` | Admin | Delete restaurant |
+| PATCH | `/restaurant/toggle-active/:id` | Admin | Toggle active status |
+| POST | `/restaurant/upload-logo/:id` | Admin | Upload logo |
+| POST | `/restaurant/upload-banner/:id` | Admin | Upload banner |
 
 ### Menu Items
-- `GET /restaurant/:restaurantId/menu/all` - Get all menu items for restaurant
-- `GET /restaurant/:restaurantId/menu/available` - Get available menu items
-- `GET /restaurant/menu/item/:id` - Get menu item by ID
-- `POST /restaurant/:restaurantId/menu/create` - Create menu item (Admin)
-- `PUT /restaurant/menu/update/:id` - Update menu item (Admin)
-- `DELETE /restaurant/menu/delete/:id` - Delete menu item (Admin)
-- `PATCH /restaurant/menu/toggle-availability/:id` - Toggle item availability (Admin)
-- `POST /restaurant/menu/upload-image/:id` - Upload menu item image (Admin)
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/restaurant/:id/menu/all` | Public | All menu items for restaurant |
+| GET | `/restaurant/:id/menu/available` | Public | Available menu items |
+| GET | `/restaurant/menu/item/:id` | Public | Menu item by ID |
+| POST | `/restaurant/:id/menu/create` | Admin | Create menu item |
+| PUT | `/restaurant/menu/update/:id` | Admin | Update menu item |
+| DELETE | `/restaurant/menu/delete/:id` | Admin | Delete menu item |
+| PATCH | `/restaurant/menu/toggle-availability/:id` | Admin | Toggle availability |
+| POST | `/restaurant/menu/upload-image/:id` | Admin | Upload item image |
 
 ### Order Management
-- `GET /order/all` - Get all orders (Admin)
-- `GET /order/:id` - Get order by ID (Customer/Admin)
-- `POST /order/create` - Create new order (Customer)
-- `PUT /order/update/:id` - Update order (Admin)
-- `PATCH /order/update-status/:id` - Update order status (Admin)
-- `PATCH /order/assign-driver/:orderId` - Assign driver to order (Admin)
-- `PATCH /order/cancel/:id` - Cancel order (Customer)
-- `DELETE /order/delete/:id` - Delete order (Admin)
-- `GET /order/customer/:customerId` - Get orders by customer (Customer/Admin)
-- `GET /order/restaurant/:restaurantId` - Get orders by restaurant (Admin)
-- `GET /order/driver/:driverId` - Get orders by driver (Driver/Admin)
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/order/all` | Admin | All orders (paginated) |
+| GET | `/order/:id` | Customer/Admin | Order by ID |
+| GET | `/order/customer/:customerId` | Customer/Admin | Orders by customer |
+| GET | `/order/restaurant/:restaurantId` | Admin | Orders by restaurant |
+| GET | `/order/driver/:driverId` | Driver/Admin | Orders by driver |
+| POST | `/order/create` | Customer | Create order |
+| PUT | `/order/update/:id` | Admin | Update order |
+| PATCH | `/order/update-status/:id` | Admin | Advance order status |
+| PATCH | `/order/assign-driver/:orderId` | Admin | Assign driver |
+| PATCH | `/order/cancel/:id` | Customer | Cancel order |
+| DELETE | `/order/delete/:id` | Admin | Delete order |
 
 ### Delivery Management
-- `GET /delivery/all` - Get all deliveries with pagination (Admin)
-- `GET /delivery/:id` - Get delivery by ID (Driver/Admin)
-- `GET /delivery/order/:orderId` - Get delivery by order ID (Driver/Admin)
-- `POST /delivery/create` - Create new delivery (Admin)
-- `PUT /delivery/update/:id` - Update delivery (Admin)
-- `PATCH /delivery/mark-picked-up/:id` - Mark delivery as picked up (Driver)
-- `PATCH /delivery/mark-delivered/:id` - Mark delivery as delivered (Driver)
-- `DELETE /delivery/delete/:id` - Delete delivery (Admin)
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | `/delivery/all` | Admin | All deliveries (paginated) |
+| GET | `/delivery/:id` | Driver/Admin | Delivery by ID |
+| GET | `/delivery/order/:orderId` | Driver/Admin | Delivery by order ID |
+| POST | `/delivery/create` | Admin | Create delivery |
+| PUT | `/delivery/update/:id` | Admin | Update delivery |
+| PATCH | `/delivery/mark-picked-up/:id` | Driver | Mark picked up |
+| PATCH | `/delivery/mark-delivered/:id` | Driver | Mark delivered |
+| DELETE | `/delivery/delete/:id` | Admin | Delete delivery |
+
+---
+
+## API Response Format
+
+```json
+// Success
+{ "statusCode": 200, "success": true, "data": {}, "message": "..." }
+
+// Error
+{ "success": false, "error": { "message": "...", "statusCode": 400, "timestamp": "..." } }
+```
+
+All list endpoints use `nestjs-typeorm-paginate` and return:
+
+```json
+{ "items": [...], "meta": { "totalItems": 50, "currentPage": 1, "itemsPerPage": 10, "totalPages": 5 }, "links": {} }
+```
+
+---
+
+## Order Status Flow
+
+```
+pending → confirmed → preparing → ready → picked_up → delivered
+                                                      ↑ cancelled (from pending/confirmed/preparing)
+```
+
+---
+
+## Roles & Permissions
+
+| Role | Can do |
+|------|--------|
+| CUSTOMER | Create orders, view own orders, manage own profile |
+| DRIVER | View/accept deliveries, toggle availability, manage own profile |
+| ADMIN | Full access to all resources, manage customers and drivers |
+
+---
 
 ## Project Structure
 
 ```
 src/
 ├── auth/
-│   ├── decorators/        # Custom decorators (CurrentUser, Roles)
-│   ├── dto/               # DTOs and response structures
-│   ├── guards/            # Auth guards (Customer, Driver, Roles)
-│   ├── strategy/          # JWT strategies
-│   └── types/             # Type definitions
-├── common/                 # Shared modules
-│   ├── enums/             # Role enums
+│   ├── decorators/        # @CurrentUser, @Roles
+│   ├── dto/               # Response DTOs (CustomerResponseDTO, DriverResponseDTO)
+│   ├── guards/            # JwtCustomerGuard, JwtDriverGuard, JwtAdminGuard, RolesGuard
+│   ├── strategy/          # jwt-customer, jwt-driver, jwt-admin strategies
+│   └── types/             # AuthenticatedUser, JwtPayload interfaces
+├── common/
+│   ├── enums/             # ROLES enum
 │   ├── exceptions/        # Custom exception classes
-│   ├── filter/            # Exception filters
-│   └── pipes/             # Validation pipes
-├── config/                 # Configuration files
-│   ├── database.config.ts
-│   ├── jwt.constants.ts
-│   └── supabase.config.ts
-├── delivery/               # Delivery management
-│   ├── dtos/
-│   ├── entities/
-│   ├── delivery.controller.ts
-│   └── delivery.service.ts
-├── drivers/                # Delivery drivers
-│   ├── dtos/
-│   ├── entities/
-│   ├── driver.controller.ts
-│   └── driver.service.ts
-├── migrations/             # TypeORM migrations
-├── orders/                 # Order management
-│   ├── dto/
-│   ├── entities/
-│   ├── order.controller.ts
-│   └── order.service.ts
-├── rabbitmq/               # RabbitMQ integration
-│   ├── rabbitmq.module.ts
-│   └── rabbitmq.service.ts
-├── resturants/             # Restaurant & menu management
-│   ├── dto/
-│   ├── entities/
-│   ├── restaurant.controller.ts
-│   └── restaurant.service.ts
-├── users/                  # User/Customer management
-│   ├── dtos/
-│   ├── entities/
-│   ├── user.controller.ts
-│   └── user.service.ts
+│   ├── filter/            # GlobalExceptionFilter
+│   └── pipes/             # UuidValidationPipe
+├── config/
+├── delivery/
+├── drivers/
+├── migrations/
+├── orders/
+├── rabbitmq/
+├── resturants/
+├── users/
 ├── events/
-|   ├── delivery/ # delivery emitted event DTOs
-│   ├── restaurant/ # Restaurant emitted event DTOs
-│   └── order/ # Order emitted event DTOs
-├── app.module.ts           # Root module
-├── main.ts                 # Application entry point
-└── data-source.ts          # TypeORM configuration
+├── app.module.ts
+└── main.ts
 ```
 
-## API Response Format
+---
 
-### Success Response
-```json
-{
-  "statusCode": 200,
-  "success": true,
-  "data": { },
-  "message": "Operation successful"
+## Bug Fixes & Lessons Learned
+
+> These bugs were discovered in March 2026 when building the frontend against this backend. The backend was originally written in December 2025 without thorough integration testing. **Lesson: write unit + integration tests as you go — don't test via the frontend six weeks later.**
+
+### Bug 1 — Wrong auth endpoint URL pattern
+
+**File:** `src/auth/auth.controller.ts`  
+**Problem:** Auth routes were registered as `/auth/register/customer`, `/auth/login/customer` etc., but the controller had `@Controller('api/auth')` making the actual paths `/api/auth/customer/login`.  
+**Fix:** Frontend service URLs corrected to match the actual backend routing.
+
+---
+
+### Bug 2 — Wrong order service URLs on the frontend (but root cause was undocumented)
+
+**Files:** `services/order.service.ts`, `services/customer.service.ts` (frontend)  
+**Problem:** Frontend was calling `/order/admin/customer/:id`, `/order/admin/driver/:id`, and `/customer/admin/orders/:id`. None of these paths exist. The actual endpoints are `/order/customer/:id`, `/order/driver/:id`, and `/customer/orders/:id`. The README did not clearly document the full path for every endpoint, leading to guesswork.  
+**Fix:** Corrected all URLs. Root cause: endpoint paths weren't fully documented with their guards, so it was unclear which prefix applied to which role.
+
+---
+
+### Bug 3 — `PaginatedResponse` shape mismatch
+
+**Files:** `src/users/user.service.ts`, `src/drivers/driver.service.ts`  
+**Problem:** Frontend `PaginatedResponse<T>` type expected `{ data: T[], total: number }` (a custom shape). The backend uses `nestjs-typeorm-paginate` which returns `{ items: T[], meta: { totalItems, currentPage, ... }, links }`. Every paginated list rendered as empty because `data?.data` and `data?.total` were always `undefined`.  
+**Fix:** Frontend `PaginatedResponse<T>` type updated to match the actual library output. All pages updated to use `.items` and `.meta.totalItems`.  
+**Also fixed:** A typo in `user.service.ts` search query — `%${search}}%` (extra `}`) meant every search returned 0 results.
+
+---
+
+### Bug 4 — No admin self-update/password endpoints existed
+
+**File:** `src/users/user.controller.ts`  
+**Problem:** `PUT /customer/update/:id` and `PUT /customer/update-password/:id` are guarded by `JwtCustomerGuard` + `CUSTOMER` role. Admin is not a customer — calling these returned 403. There were no equivalent admin-guarded update routes.  
+**Fix:** Added:
+- `PUT /customer/admin/update/:id` — `JwtAdminGuard` + `ADMIN`
+- `PUT /customer/admin/update-password/:id` — `JwtAdminGuard` + `ADMIN`
+- `POST /customer/admin/upload-profile-image/:id` — `JwtAdminGuard` + `ADMIN`
+
+All three reuse the existing service methods — no service changes needed.
+
+---
+
+### Bug 5 — Profile image field name mismatch between entity and DTO
+
+**Files:** `src/auth/dto/customer-response-dto.ts`, `src/auth/dto/driver-response-dto.ts`  
+**Problem:** The DB entity columns are named `profile_image_url`. The DTOs declared a property called `profile_img_url`. The DTO constructors do `Object.assign(this, partial)` where `partial` is the entity — `Object.assign` copies `profile_image_url` as-is, so the DTO's `profile_img_url` field remained `undefined`. The API never returned the profile picture URL even when it was stored in the database.  
+**Fix:** Added explicit mapping in both constructors:
+
+```ts
+constructor(partial: Partial<CustomerResponseDTO> & { profile_image_url?: string }) {
+    super(partial);
+    Object.assign(this, partial);
+    if (partial.profile_image_url !== undefined) {
+        this.profile_img_url = partial.profile_image_url;
+    }
 }
 ```
 
-### Error Response
-```json
-{
-  "success": false,
-  "error": {
-    "message": "Error description",
-    "statusCode": 400,
-    "timestamp": "2026-01-03T..."
+---
+
+### Bug 6 — Profile endpoints return JWT payload, not DB record (missing `profile_img_url`)
+
+**Files:** `src/auth/strategy/jwt-customer.strategy.ts`, `jwt-admin.strategy.ts`, `jwt-driver.strategy.ts`  
+**Problem:** `GET /customer/profile`, `GET /customer/admin/profile`, `GET /driver/profile` all return `@CurrentUser()` — which is the `AuthenticatedUser` object built by each strategy's `validate()` method. Each strategy already does a fresh DB query per request but only mapped `id`, `email`, `name`, `role`, `userType` — silently dropping `profile_image_url`.  
+**Fix:** Added `profile_img_url` to `AuthenticatedUser` interface and mapped it in all three strategies:
+
+```ts
+return {
+  id: customer.id,
+  email: customer.email,
+  name: customer.name,
+  role: customer.role,
+  userType: 'customer',
+  profile_img_url: customer.profile_image_url ?? undefined,
+};
+```
+
+---
+
+### Bug 7 — `GlobalExceptionFilter` crashes on non-HttpException errors
+
+**File:** `src/common/filter/http-exception.filter.ts`  
+**Problem:** The filter is decorated `@Catch()` (catches everything) but typed `catch(exception: HttpException, ...)` and called `exception.getStatus()` unconditionally on the first line. When a plain `TypeError` or runtime error was thrown, `.getStatus()` doesn't exist → `TypeError: exception.getStatus is not a function` → the filter itself crashed and NestJS couldn't send an error response.  
+**Fix:** Changed parameter to `exception: unknown`, added `instanceof HttpException` check before calling any HttpException methods, defaulted status to `HttpStatus.INTERNAL_SERVER_ERROR` for all other errors.
+
+```ts
+catch(exception: unknown, host: ArgumentsHost) {
+  if (exception instanceof HttpException) {
+    status = exception.getStatus();
+    ...
+  } else if (exception instanceof Error) {
+    message = exception.message;
+    this.logger.error(`Unhandled error: ${exception.message}`, exception.stack);
   }
-}
 ```
 
-## Order Status Flow
+---
 
-Orders follow this status progression:
+### Bug 8 — Driver JWT strategy imported `JwtPayload` from `@supabase/supabase-js`
 
-1. **pending** → Initial state when order is created
-2. **confirmed** → Restaurant confirms the order
-3. **preparing** → Order is being prepared
-4. **ready** → Order is ready for pickup
-5. **picked_up** → Driver has picked up the order
-6. **delivered** → Order has been delivered
-7. **cancelled** → Order was cancelled (can happen from pending/confirmed/preparing states)
+**File:** `src/auth/strategy/jwt-driver.strategy.ts`  
+**Problem:** `import { JwtPayload } from '@supabase/supabase-js'` — used Supabase's JWT payload type instead of the local `auth.types.ts` definition. Worked by accident (same field names) but was a latent type safety issue.  
+**Fix:** Import corrected to local `auth.types.ts`.
+
+---
 
 ## Event-Driven Architecture
 
-This application uses an event-driven architecture powered by RabbitMQ to enable asynchronous communication between different modules. This design ensures loose coupling, scalability, and resilience.
-
-### Architecture Overview
-
-The application follows a monolithic architecture with event-driven communication between modules:
+RabbitMQ topic exchange connects three services asynchronously:
 
 ```
-Customer → Order Service → RabbitMQ → Restaurant Service → RabbitMQ → Delivery Service
+Customer places order
+  → OrderService emits order.placed
+    → RestaurantService confirms → emits order.confirmed
+      → OrderService updates status
+        → RestaurantService emits order.ready
+          → DeliveryService assigns driver → emits driver.assigned
+            → Driver picks up → emits order.picked.up
+              → Driver delivers → emits order.delivered
+                → OrderService marks delivered, driver set available
 ```
 
-### Event Flow
-
-```
-1. Customer creates order (REST API)
-   ↓
-2. OrdersService saves to DB
-   ↓
-3. OrdersService emits 'order.placed' → RabbitMQ
-   ↓
-4. RestaurantsController consumes 'order.placed'
-   ↓
-5. RestaurantsService processes order
-   ↓
-6. RestaurantsService emits 'order.confirmed' → RabbitMQ
-   ↓
-7. OrdersController consumes 'order.confirmed'
-   ↓
-8. OrdersService updates order status to 'confirmed'
-   ↓
-9. RestaurantsService emits 'order.ready' → RabbitMQ
-   ↓
-10. DeliveryController consumes 'order.ready'
-    ↓
-11. DeliveryService assigns driver
-    ↓
-12. DeliveryService emits 'driver.assigned' → RabbitMQ
-    ↓
-13. OrdersController consumes 'driver.assigned'
-    ↓
-14. Driver picks up order (REST API)
-    ↓
-15. DeliveryService emits 'order.picked.up' → RabbitMQ
-    ↓
-16. DeliveryController consumes 'order.picked.up'
-    ↓
-17. Driver delivers order (REST API)
-    ↓
-18. DeliveryService emits 'order.delivered' → RabbitMQ
-    ↓
-19. OrdersController consumes 'order.delivered'
-    ↓
-20. OrdersService updates order status and marks driver as available
-```
-
-### Events Reference
-
-#### Order Service Events
-
-**Emits:**
-- `order.placed` - When a customer creates a new order
-
-**Consumes:**
-- `order.confirmed` - Updates order status and estimated delivery time
-- `driver.assigned` - Updates order with assigned driver ID
-- `order.delivered` - Marks order as delivered and sets driver as available
-
-#### Restaurant Service Events
-
-**Consumes:**
-- `order.placed` - Receives new order notification and confirms it
-
-**Emits:**
-- `order.confirmed` - Confirms order with estimated delivery time
-- `order.ready` - Notifies that food is ready for pickup
-
-#### Delivery Service Events
-
-**Consumes:**
-- `order.ready` - Assigns available driver to order
-- `order.picked.up` - Updates delivery pickup timestamp
-
-**Emits:**
-- `driver.assigned` - Notifies when driver is assigned with driver details
-- `order.picked.up` - Notifies when driver picks up the order
-- `order.delivered` - Notifies when order is delivered
-
-### Event DTOs
-
-All events extend `BaseEventDTO` and are stored in `src/events/`:
-
-```typescript
-// Base Event DTO
-export abstract class BaseEventDTO {
-  @IsUUID()
-  eventId: string;          // Auto-generated UUID
-  
-  @IsDateString()
-  timestamp: string;        // ISO 8601 timestamp
-  
-  @IsString()
-  eventType: string;        // Event type identifier
-}
-```
-
-**Event Types:**
-- `OrderPlacementEvent` - Contains order details, items, customer, restaurant
-- `OrderConfirmedEvent` - Contains order ID, restaurant ID, estimated delivery time
-- `OrderReadyEvent` - Contains order ID, restaurant ID, delivery address
-- `DriverAssignedEvent` - Contains order ID, driver details, estimated pickup time
-- `OrderPickedUpEvent` - Contains order ID, driver ID, customer ID, pickup time
-- `OrderDeliveredEvent` - Contains order ID, driver ID, delivery time
-
-### RabbitMQ Configuration
-
-The application uses RabbitMQ with topic exchange for flexible message routing:
-
-**Queue Configurations:**
-
-```typescript
-ORDERS: {
-  queue: 'order-service-queue',
-  routingKeys: ['order.confirmed', 'driver.assigned', 'order.delivered']
-}
-
-RESTAURANTS: {
-  queue: 'restaurants-service-queue',
-  routingKeys: ['order.placed']
-}
-
-DELIVERY: {
-  queue: 'delivery-service-queue',
-  routingKeys: ['order.ready', 'order.picked.up']
-}
-```
-
-**Exchange:** Topic exchange for pattern-based routing  
-**Durability:** All queues are durable  
-**Message TTL:** 24 hours  
-**Acknowledgment:** Manual ACK enabled
-
-### Benefits of Event-Driven Architecture
-
-1. **Loose Coupling** - Services communicate through events, not direct dependencies
-2. **Scalability** - Easy to scale individual services based on load
-3. **Resilience** - Services can recover from failures independently
-4. **Auditability** - All events are logged and can be traced
-5. **Extensibility** - New services can subscribe to existing events without changes
-6. **Asynchronous Processing** - Non-blocking operations improve performance
-
-### Testing Events
-
-To test the event-driven flow:
-
-1. Ensure RabbitMQ is running
-2. Start the application: `npm run start:dev`
-3. Create an order via REST API
-4. Monitor logs to see events being emitted and consumed
-5. Check order status changes through the workflow
-
-Example log output:
-```
-Event emitted [order.placed]: { orderId: '...', ... }
-Received order.placed event: { orderId: '...', ... }
-Emitted order.confirmed for order: ...
-Received order.confirmed event: { orderId: '...', ... }
-```
-
-## Roles & Permissions
-
-The application implements role-based access control with three roles:
-
-- **CUSTOMER** - Can create orders, manage profile, view own orders
-- **DRIVER** - Can manage deliveries, update vehicle info, toggle availability
-- **ADMIN** - Full access to all resources and management functions
-
-## Code Formatting
-
-```bash
-# Format code with Prettier
-$ npm run format
-
-# Lint and fix code
-$ npm run lint
-```
-
-## Deployment
-
-When you're ready to deploy your application to production:
-
-1. Set `NODE_ENV=production` in your environment variables
-2. Configure SSL for database connections
-3. Use a process manager like PM2 for production
-4. Set up proper logging and monitoring
-
-```bash
-# Build the application
-$ npm run build
-
-# Run in production mode
-$ npm run start:prod
-```
-
-For more information, check out the [NestJS deployment documentation](https://docs.nestjs.com/deployment).
+---
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome. Please add unit and integration tests for any new endpoints before submitting a PR.
 
 ## License
 
-This project is licensed under the UNLICENSED license.
+UNLICENSED
