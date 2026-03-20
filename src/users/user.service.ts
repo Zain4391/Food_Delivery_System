@@ -4,7 +4,7 @@ import { Customer } from "./entities/user.entity";
 import { Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { CustomerPaginationDTO } from "./dtos/customer-pagination.dto";
-import { paginate, IPaginationOptions } from "nestjs-typeorm-paginate";
+import { paginate, Pagination, IPaginationOptions } from "nestjs-typeorm-paginate";
 import { CustomerResponseDTO } from "src/auth/dto/customer-response-dto";
 import { plainToInstance } from "class-transformer";
 import { CustomerEmailNotFoundException, CustomerNotFoundException, PasswordsNotMatchException, FileUploadException, InvalidFileTypeException } from "src/common/exceptions/customer.exceptions";
@@ -17,13 +17,6 @@ import { OrderService } from "src/orders/order.service";
 import { OrderPaginationDTO } from "src/orders/dto/order-pagination.dto";
 import { OrderResponseDTO } from "src/orders/dto/order-response.dto";
 
-export interface PaginatedResult<T> {
-    data: T[];
-    total: number;
-    page: number;
-    limit: number;
-}
-
 @Injectable()
 export class CustomerService {
 
@@ -33,16 +26,15 @@ export class CustomerService {
         private orderService: OrderService
     ) {}
 
-    async findAll(query: CustomerPaginationDTO): Promise<PaginatedResult<CustomerResponseDTO>> {
+    async findAll(query: CustomerPaginationDTO): Promise<Pagination<CustomerResponseDTO>> {
 
-        const { page = 1, limit = 10, search, sortBy, sortOrder } = query;
+        const { page, limit, search, sortBy, sortOrder} = query;
 
         const queryBuilder = this.customerRepository.createQueryBuilder('customer');
 
         if (search) {
             queryBuilder.where(
                 'customer.name ILIKE :search OR customer.email ILIKE :search OR customer.address ILIKE :search',
-                // Fix: was `%${search}}%` (extra closing brace) — always produced 0 results
                 { search: `%${search}%` }
             );
         }
@@ -55,189 +47,92 @@ export class CustomerService {
         const result = await paginate<Customer>(queryBuilder, paginationOptions);
 
         return {
-            data: plainToInstance(CustomerResponseDTO, result.items),
-            total: result.meta.totalItems,
-            page: result.meta.currentPage,
-            limit: result.meta.itemsPerPage,
+            items: plainToInstance(CustomerResponseDTO, result.items),
+            meta: result.meta,
+            links: result.links
         };
     }
 
     async findById(id: string): Promise<CustomerResponseDTO> {
-
-        const customer = await this.customerRepository.findOne({
-            where: { id: id}
-        });
-
-        if (!customer) {
-            throw new CustomerNotFoundException(id);
-        }
-
+        const customer = await this.customerRepository.findOne({ where: { id } });
+        if (!customer) throw new CustomerNotFoundException(id);
         return new CustomerResponseDTO(customer);
     }
 
     async findByEmail(email: string): Promise<CustomerResponseDTO> {
-
-        const customer = await this.customerRepository.findOne({
-            where: { email: email }
-        });
-
-        if (!customer) {
-            throw new CustomerEmailNotFoundException(email);
-        }
-
+        const customer = await this.customerRepository.findOne({ where: { email } });
+        if (!customer) throw new CustomerEmailNotFoundException(email);
         return new CustomerResponseDTO(customer);
     }
-    
-    async findUserOrders(customerId: string, query: OrderPaginationDTO): Promise<any> {
-        const customer = await this.customerRepository.findOne({
-            where: { id: customerId }
-        });
 
-        if (!customer) {
-            throw new CustomerNotFoundException(customerId);
-        }
-
+    async findUserOrders(customerId: string, query: OrderPaginationDTO): Promise<Pagination<OrderResponseDTO>> {
+        const customer = await this.customerRepository.findOne({ where: { id: customerId } });
+        if (!customer) throw new CustomerNotFoundException(customerId);
         return this.orderService.findByCustomer(customerId, query);
     }
 
     async update(updateDto: UpdateCustomerDTO, id: string): Promise<CustomerResponseDTO> {
-
-        const customer = await this.customerRepository.findOne({
-            where: { id: id }
-        });
-
-        if (!customer) {
-            throw new CustomerNotFoundException(id);
-        }
-
+        const customer = await this.customerRepository.findOne({ where: { id } });
+        if (!customer) throw new CustomerNotFoundException(id);
         Object.assign(customer, updateDto);
         customer.updated_at = new Date();
-
         const updatedCustomer = await this.customerRepository.save(customer);
-
         return new CustomerResponseDTO(updatedCustomer);
     }
 
     async updatePassword(updateDto: UpdatePasswordDTO, id: string): Promise<string> {
-        const customer = await this.customerRepository.findOne({
-            where: { id: id }
-        });
-
-        if (!customer) {
-            throw new CustomerNotFoundException(id);
-        }
-
+        const customer = await this.customerRepository.findOne({ where: { id } });
+        if (!customer) throw new CustomerNotFoundException(id);
         const isValid = await bcrypt.compare(updateDto.currentPassword, customer.password);
-
-        if(!isValid) {
-            throw new InvalidCredentialsException();
-        }
-
-        if(updateDto.newPassword !== updateDto.confirmNewPassword) {
-            throw new PasswordsNotMatchException();
-        }
-
-        const hashedPassword = await bcrypt.hash(updateDto.newPassword, 10);
-        
-        customer.password = hashedPassword;
+        if (!isValid) throw new InvalidCredentialsException();
+        if (updateDto.newPassword !== updateDto.confirmNewPassword) throw new PasswordsNotMatchException();
+        customer.password = await bcrypt.hash(updateDto.newPassword, 10);
         customer.updated_at = new Date();
-
         await this.customerRepository.save(customer);
-
         return 'Password updated successfully';
     }
 
     async forgotPassword(forgotPasswordDto: ForgotPasswordDTO): Promise<string> {
-        const customer = await this.customerRepository.findOne({
-            where: { email: forgotPasswordDto.email }
-        });
-
-        if (!customer) {
-            throw new CustomerEmailNotFoundException(forgotPasswordDto.email);
-        }
-
-        if(forgotPasswordDto.newPassword !== forgotPasswordDto.confirmNewPassword) {
-            throw new PasswordsNotMatchException();
-        }
-
-        const hashedPassword = await bcrypt.hash(forgotPasswordDto.newPassword, 10);
-        
-        customer.password = hashedPassword;
+        const customer = await this.customerRepository.findOne({ where: { email: forgotPasswordDto.email } });
+        if (!customer) throw new CustomerEmailNotFoundException(forgotPasswordDto.email);
+        if (forgotPasswordDto.newPassword !== forgotPasswordDto.confirmNewPassword) throw new PasswordsNotMatchException();
+        customer.password = await bcrypt.hash(forgotPasswordDto.newPassword, 10);
         customer.updated_at = new Date();
-
         await this.customerRepository.save(customer);
-
         return 'Password changed successfully';
     }
 
     async uploadProfileImage(id: string, file: Express.Multer.File): Promise<CustomerResponseDTO> {
-        const customer = await this.customerRepository.findOne({
-            where: { id }
-        });
-
-        if (!customer) {
-            throw new CustomerNotFoundException(id);
-        }
-
+        const customer = await this.customerRepository.findOne({ where: { id } });
+        if (!customer) throw new CustomerNotFoundException(id);
         const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        const mimeType = file.mimetype;
-        if (!allowedMimeTypes.includes(mimeType)) {
-            throw new InvalidFileTypeException(allowedMimeTypes);
-        }
-
+        if (!allowedMimeTypes.includes(file.mimetype)) throw new InvalidFileTypeException(allowedMimeTypes);
         try {
             if (customer.profile_image_url) {
                 const oldFileName = customer.profile_image_url.split('/').pop();
                 if (oldFileName) {
-                    await getSupabaseClient().storage
-                        .from('profile-banner-images')
-                        .remove([`customers/${oldFileName}`]);
+                    await getSupabaseClient().storage.from('profile-banner-images').remove([`customers/${oldFileName}`]);
                 }
             }
-
             const fileName = `${id}-${Date.now()}-${file.originalname.replace(/\s/g, '-')}`;
-            const fileBuffer = file.buffer;
-            
             const { error: uploadError } = await getSupabaseClient().storage
                 .from('profile-banner-images')
-                .upload(`customers/${fileName}`, fileBuffer, {
-                    contentType: mimeType,
-                    upsert: true
-                });
-
-            if (uploadError) {
-                throw new FileUploadException(uploadError.message);
-            }
-
+                .upload(`customers/${fileName}`, file.buffer, { contentType: file.mimetype, upsert: true });
+            if (uploadError) throw new FileUploadException(uploadError.message);
             const { data: { publicUrl } } = getSupabaseClient().storage
-                .from('profile-banner-images')
-                .getPublicUrl(`customers/${fileName}`);
-
+                .from('profile-banner-images').getPublicUrl(`customers/${fileName}`);
             customer.profile_image_url = publicUrl;
             customer.updated_at = new Date();
-
-            const updatedCustomer = await this.customerRepository.save(customer);
-            return new CustomerResponseDTO(updatedCustomer);
-
+            return new CustomerResponseDTO(await this.customerRepository.save(customer));
         } catch (error: unknown) {
-            if (error instanceof FileUploadException || error instanceof InvalidFileTypeException) {
-                throw error;
-            }
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during file upload';
-            throw new FileUploadException(errorMessage);
+            if (error instanceof FileUploadException || error instanceof InvalidFileTypeException) throw error;
+            throw new FileUploadException(error instanceof Error ? error.message : 'Unknown error');
         }
     }
 
     async remove(id: string): Promise<string> {
-
-        const customer = await this.customerRepository.findOne({
-            where: { id: id }
-        });
-
-        if(!customer) {
-            throw new CustomerNotFoundException(id);
-        }
-
+        const customer = await this.customerRepository.findOne({ where: { id } });
+        if (!customer) throw new CustomerNotFoundException(id);
         await this.customerRepository.remove(customer);
         return `Customer with ID: ${id} deleted successfully`;
     }
