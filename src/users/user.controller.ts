@@ -99,6 +99,18 @@ export class CustomerController {
         return new ApiSuccessResponse([], message, HttpStatus.OK);
     }
 
+    @Post("admin/upload-profile-image/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadAdminProfileImage(
+        @Param("id", UuidValidationPipe) id: string,
+        @UploadedFile() file: Express.Multer.File
+    ) {
+        const admin = await this.customerService.uploadProfileImage(id, file);
+        return new ApiSuccessResponse(admin, "Profile image uploaded successfully", HttpStatus.OK);
+    }
+
     @Post("forgot-password")
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDTO) {
         const message = await this.customerService.forgotPassword(forgotPasswordDto);
