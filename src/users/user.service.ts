@@ -4,7 +4,7 @@ import { Customer } from "./entities/user.entity";
 import { Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { CustomerPaginationDTO } from "./dtos/customer-pagination.dto";
-import { paginate, Pagination, IPaginationOptions } from "nestjs-typeorm-paginate";
+import { paginate, IPaginationOptions } from "nestjs-typeorm-paginate";
 import { CustomerResponseDTO } from "src/auth/dto/customer-response-dto";
 import { plainToInstance } from "class-transformer";
 import { CustomerEmailNotFoundException, CustomerNotFoundException, PasswordsNotMatchException, FileUploadException, InvalidFileTypeException } from "src/common/exceptions/customer.exceptions";
@@ -17,46 +17,49 @@ import { OrderService } from "src/orders/order.service";
 import { OrderPaginationDTO } from "src/orders/dto/order-pagination.dto";
 import { OrderResponseDTO } from "src/orders/dto/order-response.dto";
 
+export interface PaginatedResult<T> {
+    data: T[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
 @Injectable()
 export class CustomerService {
 
-    constructor(
+    constructor (
         @InjectRepository(Customer)
         private customerRepository: Repository<Customer>,
         private orderService: OrderService
     ) {}
 
-    async findAll(query: CustomerPaginationDTO): Promise<Pagination<CustomerResponseDTO>> {
+    async findAll(query: CustomerPaginationDTO): Promise<PaginatedResult<CustomerResponseDTO>> {
 
-        const { page, limit, search, sortBy, sortOrder} = query;
+        const { page = 1, limit = 10, search, sortBy, sortOrder } = query;
 
         const queryBuilder = this.customerRepository.createQueryBuilder('customer');
 
         if (search) {
             queryBuilder.where(
                 'customer.name ILIKE :search OR customer.email ILIKE :search OR customer.address ILIKE :search',
-                { search: `%${search}}%`}
+                // Fix: was `%${search}}%` (extra closing brace) — always produced 0 results
+                { search: `%${search}%` }
             );
         }
 
-        // apply sorting
         if (sortBy && sortOrder) {
             queryBuilder.orderBy(`customer.${sortBy}`, sortOrder);
         }
 
-        // paginated response
-        const paginationOptions: IPaginationOptions = {
-            page,
-            limit
-        };
-
+        const paginationOptions: IPaginationOptions = { page, limit };
         const result = await paginate<Customer>(queryBuilder, paginationOptions);
 
         return {
-            items: plainToInstance(CustomerResponseDTO, result.items),
-            meta: result.meta,
-            links: result.links
-        }
+            data: plainToInstance(CustomerResponseDTO, result.items),
+            total: result.meta.totalItems,
+            page: result.meta.currentPage,
+            limit: result.meta.itemsPerPage,
+        };
     }
 
     async findById(id: string): Promise<CustomerResponseDTO> {
@@ -85,8 +88,7 @@ export class CustomerService {
         return new CustomerResponseDTO(customer);
     }
     
-    async findUserOrders(customerId: string, query: OrderPaginationDTO): Promise<Pagination<OrderResponseDTO>> {
-        // Validate customer exists
+    async findUserOrders(customerId: string, query: OrderPaginationDTO): Promise<any> {
         const customer = await this.customerRepository.findOne({
             where: { id: customerId }
         });
@@ -108,7 +110,6 @@ export class CustomerService {
             throw new CustomerNotFoundException(id);
         }
 
-        // Update customer with new data
         Object.assign(customer, updateDto);
         customer.updated_at = new Date();
 
@@ -136,7 +137,6 @@ export class CustomerService {
             throw new PasswordsNotMatchException();
         }
 
-        // Hash the new password
         const hashedPassword = await bcrypt.hash(updateDto.newPassword, 10);
         
         customer.password = hashedPassword;
@@ -156,12 +156,10 @@ export class CustomerService {
             throw new CustomerEmailNotFoundException(forgotPasswordDto.email);
         }
 
-
         if(forgotPasswordDto.newPassword !== forgotPasswordDto.confirmNewPassword) {
             throw new PasswordsNotMatchException();
         }
 
-        // Hash the new password
         const hashedPassword = await bcrypt.hash(forgotPasswordDto.newPassword, 10);
         
         customer.password = hashedPassword;
@@ -173,7 +171,6 @@ export class CustomerService {
     }
 
     async uploadProfileImage(id: string, file: Express.Multer.File): Promise<CustomerResponseDTO> {
-        // Validate customer exists
         const customer = await this.customerRepository.findOne({
             where: { id }
         });
@@ -182,7 +179,6 @@ export class CustomerService {
             throw new CustomerNotFoundException(id);
         }
 
-        // Validate file type
         const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
         const mimeType = file.mimetype;
         if (!allowedMimeTypes.includes(mimeType)) {
@@ -190,7 +186,6 @@ export class CustomerService {
         }
 
         try {
-            // Delete old profile image if exists
             if (customer.profile_image_url) {
                 const oldFileName = customer.profile_image_url.split('/').pop();
                 if (oldFileName) {
@@ -200,7 +195,6 @@ export class CustomerService {
                 }
             }
 
-            // Upload new image to Supabase Storage
             const fileName = `${id}-${Date.now()}-${file.originalname.replace(/\s/g, '-')}`;
             const fileBuffer = file.buffer;
             
@@ -215,12 +209,10 @@ export class CustomerService {
                 throw new FileUploadException(uploadError.message);
             }
 
-            // Get public URL
             const { data: { publicUrl } } = getSupabaseClient().storage
                 .from('profile-banner-images')
                 .getPublicUrl(`customers/${fileName}`);
 
-            // Update customer record
             customer.profile_image_url = publicUrl;
             customer.updated_at = new Date();
 
