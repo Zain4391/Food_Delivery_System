@@ -23,7 +23,6 @@ export class JwtAdminStrategy extends PassportStrategy(Strategy, 'jwt-admin') {
     }
 
     async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
-
         const admin = await this.customerRepository.findOne({
             where: { id: payload.sub }
         });
@@ -41,7 +40,8 @@ export class JwtAdminStrategy extends PassportStrategy(Strategy, 'jwt-admin') {
             email: admin.email,
             name: admin.name,
             role: admin.role,
-            userType: 'admin'
-        }
+            userType: 'admin',
+            profile_img_url: admin.profile_image_url ?? undefined,
+        };
     }
 }

@@ -7,7 +7,6 @@ import { Customer } from "src/users/entities/user.entity";
 import { Repository } from "typeorm";
 import type { AuthenticatedUser, JwtPayload } from "../types/auth.types";
 
-
 @Injectable()
 export class JwtCustomerStrategy extends PassportStrategy(Strategy, 'jwt-customer') {
 
@@ -23,12 +22,11 @@ export class JwtCustomerStrategy extends PassportStrategy(Strategy, 'jwt-custome
     }
 
     async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
-
         const customer = await this.customerRepository.findOne({
             where: { id: payload.sub }
         });
 
-        if(!customer) {
+        if (!customer) {
             throw new UnauthorizedException();
         }
 
@@ -37,7 +35,8 @@ export class JwtCustomerStrategy extends PassportStrategy(Strategy, 'jwt-custome
             email: customer.email,
             name: customer.name,
             role: customer.role,
-            userType: 'customer'
-        }
+            userType: 'customer',
+            profile_img_url: customer.profile_image_url ?? undefined,
+        };
     }
 }

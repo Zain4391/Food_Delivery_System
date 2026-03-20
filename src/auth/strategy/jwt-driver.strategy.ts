@@ -1,12 +1,12 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { InjectRepository } from "@nestjs/typeorm";
-import { JwtPayload } from "@supabase/supabase-js";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { jwtConstants } from "src/config/jwt.constants";
 import { DeliveryDriver } from "src/drivers/entities/driver.entity";
 import { Repository } from "typeorm";
 import { AuthenticatedUser } from "../types/auth.types";
+import type { JwtPayload } from "../types/auth.types";
 
 @Injectable()
 export class DriverStrategy extends PassportStrategy(Strategy, 'jwt-driver') {
@@ -15,10 +15,10 @@ export class DriverStrategy extends PassportStrategy(Strategy, 'jwt-driver') {
         @InjectRepository(DeliveryDriver)
         private driverRepository: Repository<DeliveryDriver>
     ) {
-        super({ 
+        super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: jwtConstants.driverSecret
+            secretOrKey: jwtConstants.driverSecret,
         })
     }
 
@@ -36,7 +36,8 @@ export class DriverStrategy extends PassportStrategy(Strategy, 'jwt-driver') {
             email: driver.email,
             name: driver.name,
             role: driver.role,
-            userType: 'driver'
-        }
+            userType: 'driver',
+            profile_img_url: driver.profile_image_url ?? undefined,
+        };
     }
 }

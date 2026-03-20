@@ -13,5 +13,6 @@ export interface AuthenticatedUser {
     email: string;
     name: string;
     role: ROLES;
-    userType: 'customer' | 'driver' | 'admin' ;
+    userType: 'customer' | 'driver' | 'admin';
+    profile_img_url?: string;
 }
