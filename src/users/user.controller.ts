@@ -82,6 +82,23 @@ export class CustomerController {
         return new ApiSuccessResponse([], message, HttpStatus.OK);
     }
 
+    // ── Admin self-update routes ───────────────────────────────────────────
+
+    @Put("admin/update/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async updateAdmin(@Param("id", UuidValidationPipe) id: string, @Body() updateDto: UpdateCustomerDTO) {
+        return new ApiSuccessResponse(await this.customerService.update(updateDto, id), "Admin profile updated successfully", HttpStatus.OK);
+    }
+
+    @Put("admin/update-password/:id")
+    @UseGuards(JwtAdminGuard, RolesGuard)
+    @Roles(ROLES.ADMIN)
+    async updateAdminPassword(@Param("id", UuidValidationPipe) id: string, @Body() updateDto: UpdatePasswordDTO) {
+        const message = await this.customerService.updatePassword(updateDto, id);
+        return new ApiSuccessResponse([], message, HttpStatus.OK);
+    }
+
     @Post("forgot-password")
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDTO) {
         const message = await this.customerService.forgotPassword(forgotPasswordDto);
