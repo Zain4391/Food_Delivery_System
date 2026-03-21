@@ -133,6 +133,7 @@ export class OrderService {
         this.log.log("Event Made:", event);
         this.rabbitMQService.emitEvent('order.placed', event);
         this.log.log("Event published:", event.eventId);
+
         return new OrderResponseDTO(completeOrder);
     }
 
@@ -185,7 +186,9 @@ export class OrderService {
         const order = await this.orderRepository.findOne({ where: { id }, relations: ['orderItems'] });
         if (!order) throw new OrderNotFoundException(id);
         const cancellableStatuses = [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PREPARING];
-        if (!cancellableStatuses.includes(order.status)) throw new InvalidOrderStatusException(order.status, 'Orders can only be cancelled if they are pending, confirmed, or preparing');
+        if (!cancellableStatuses.includes(order.status)) {
+            throw new InvalidOrderStatusException(order.status, 'Orders can only be cancelled if they are pending, confirmed, or preparing');
+        }
         order.status = OrderStatus.CANCELLED;
         order.updated_at = new Date();
         return new OrderResponseDTO(await this.orderRepository.save(order));
@@ -223,15 +226,16 @@ export class OrderService {
         const order = await this.orderRepository.findOne({ where: { id: orderId }, relations: ['driver'] });
         if (!order) throw new OrderNotFoundException(orderId);
 
-        // Idempotency guard
+        // Idempotency: skip if already delivered
         if (order.status === OrderStatus.DELIVERED) {
-            this.log.warn(`Order ${orderId} already delivered — skipping`);
+            this.log.warn(`Order ${orderId} is already delivered, skipping handler`);
             return;
         }
 
         order.status = OrderStatus.DELIVERED;
         order.updated_at = new Date();
         await this.orderRepository.save(order);
+
         if (order.driver) {
             order.driver.is_available = true;
             await this.driverRepository.save(order.driver);
@@ -243,9 +247,9 @@ export class OrderService {
         const order = await this.orderRepository.findOne({ where: { id: data.orderId } });
         if (!order) throw new OrderNotFoundException(data.orderId);
 
-        // Idempotency guard: only confirm if still pending
+        // Idempotency: skip if already confirmed or further along
         if (order.status !== OrderStatus.PENDING) {
-            this.log.warn(`Order ${data.orderId} is already ${order.status} — skipping order.confirmed handler`);
+            this.log.warn(`Order ${data.orderId} is already ${order.status}, skipping order.confirmed handler`);
             return;
         }
 
@@ -260,9 +264,9 @@ export class OrderService {
         const order = await this.orderRepository.findOne({ where: { id: data.orderId } });
         if (!order) throw new OrderNotFoundException(data.orderId);
 
-        // Idempotency guard: skip if driver already set
+        // Idempotency: skip if driver already assigned
         if (order.driver_id) {
-            this.log.warn(`Order ${data.orderId} already has driver ${order.driver_id} — skipping driver.assigned handler`);
+            this.log.warn(`Order ${data.orderId} already has driver ${order.driver_id}, skipping driver.assigned handler`);
             return;
         }
 

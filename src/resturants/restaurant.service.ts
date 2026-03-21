@@ -36,7 +36,6 @@ export class RestaurantService {
         private readonly rabbitMQService: RabbitMQService
     ) {}
 
-    // Menu Items Related
     async findAll(restaurantId: string, query: MenuItemPaginationDTO): Promise<Pagination<MenuItemResponseDTO>> {
         const restaurant = await this.restaurantRepository.findOne({ where: { id: restaurantId } });
         if (!restaurant) throw new RestaurantNotFoundException(restaurantId);
@@ -51,6 +50,7 @@ export class RestaurantService {
         if (minPrepTime !== undefined) queryBuilder.andWhere('menuItem.preparation_time >= :minPrepTime', { minPrepTime });
         if (maxPrepTime !== undefined) queryBuilder.andWhere('menuItem.preparation_time <= :maxPrepTime', { maxPrepTime });
         if (sortBy && sortOrder) queryBuilder.orderBy(`menuItem.${sortBy}`, sortOrder);
+
         const result = await paginate<MenuItem>(queryBuilder, { page, limit } as IPaginationOptions);
         return { items: plainToInstance(MenuItemResponseDTO, result.items), meta: result.meta, links: result.links };
     }
@@ -100,6 +100,7 @@ export class RestaurantService {
     async findAvailableItems(restaurantId: string, query: MenuItemPaginationDTO): Promise<Pagination<MenuItemResponseDTO>> {
         const restaurant = await this.restaurantRepository.findOne({ where: { id: restaurantId } });
         if (!restaurant) throw new RestaurantNotFoundException(restaurantId);
+
         const { page, limit, search, category, minPrice, maxPrice, minPrepTime, maxPrepTime, sortBy, sortOrder } = query;
         const queryBuilder = this.menuItemRepository.createQueryBuilder('menuItem');
         queryBuilder.where('menuItem.restaurant_id = :restaurantId', { restaurantId });
@@ -111,6 +112,7 @@ export class RestaurantService {
         if (minPrepTime !== undefined) queryBuilder.andWhere('menuItem.preparation_time >= :minPrepTime', { minPrepTime });
         if (maxPrepTime !== undefined) queryBuilder.andWhere('menuItem.preparation_time <= :maxPrepTime', { maxPrepTime });
         if (sortBy && sortOrder) queryBuilder.orderBy(`menuItem.${sortBy}`, sortOrder);
+
         const result = await paginate<MenuItem>(queryBuilder, { page, limit } as IPaginationOptions);
         return { items: plainToInstance(MenuItemResponseDTO, result.items), meta: result.meta, links: result.links };
     }
@@ -234,16 +236,16 @@ export class RestaurantService {
             return;
         }
 
-        // Idempotency guard: only confirm if still pending
+        // Idempotency: skip if already confirmed or further along
         if (order.status !== OrderStatus.PENDING) {
-            this.logger.warn(`Order ${data.orderId} is already ${order.status} — skipping order.placed handler`);
+            this.logger.warn(`Order ${data.orderId} is already ${order.status}, skipping order.placed handler`);
             return;
         }
 
         const confirmedEvent = new OrderConfirmedEvent({
             orderId: order.id,
             restaurantId: order.restaurant_id,
-            estimatedDeliveryTime: order.estimated_delivery_time?.toISOString() || new Date(Date.now() + 45 * 60000).toISOString()
+            estimatedDeliveryTime: new Date(Date.now() + 45 * 60000).toISOString()
         });
         this.rabbitMQService.emitEvent('order.confirmed', confirmedEvent);
         this.logger.log(`Emitted order.confirmed for order: ${data.orderId}`);
@@ -256,7 +258,6 @@ export class RestaurantService {
             return;
         }
 
-        // Set status to ready so the UI reflects the change immediately
         order.status = OrderStatus.READY;
         order.updated_at = new Date();
         await this.orderRepository.save(order);

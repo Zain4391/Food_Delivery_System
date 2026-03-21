@@ -9,8 +9,8 @@ import { DeliveryResponseDTO } from "./dtos/delivery-response.dto";
 import { DeliveryPaginationDTO } from "./dtos/delivery-pagination.dto";
 import { IPaginationOptions, paginate, Pagination } from "nestjs-typeorm-paginate";
 import { plainToInstance } from "class-transformer";
-import {
-    DeliveryNotFoundException,
+import { 
+    DeliveryNotFoundException, 
     DeliveryAlreadyExistsException,
     DeliveryAlreadyPickedUpException,
     DeliveryAlreadyDeliveredException,
@@ -92,7 +92,6 @@ export class DeliveryService {
         delivery.updated_at = new Date();
         const savedDelivery = await this.deliveryRepository.save(delivery);
 
-        // Update order status to picked_up immediately — don't rely on event chain
         const order = await this.orderRepository.findOne({ where: { id: savedDelivery.order_id }, relations: ['driver'] });
         if (order) {
             order.status = OrderStatus.PICKED_UP;
@@ -125,7 +124,7 @@ export class DeliveryService {
     }
 
     async remove(id: string): Promise<string> {
-        const delivery = await this.deliveryRepository.findOne({ where: { id } });
+        const delivery = await this.deliveryRepository.findOne({ where: { id: id } });
         if (!delivery) throw new DeliveryNotFoundException(id);
         await this.deliveryRepository.remove(delivery);
         return `Delivery ${id} removed successfully`;
@@ -137,33 +136,25 @@ export class DeliveryService {
         this.logger.log(`Received order.ready event for order: ${data.orderId}`);
 
         const order = await this.orderRepository.findOne({ where: { id: data.orderId } });
-        if (!order) {
-            this.logger.error(`Order ${data.orderId} not found`);
-            return;
-        }
+        if (!order) { this.logger.error(`Order ${data.orderId} not found`); return; }
 
-        // Idempotency guard: skip if driver already assigned
+        // Idempotency: skip if driver already assigned
         if (order.driver_id) {
-            this.logger.warn(`Order ${data.orderId} already has driver ${order.driver_id} — skipping order.ready handler`);
+            this.logger.warn(`Order ${data.orderId} already has driver ${order.driver_id}, skipping order.ready handler`);
             return;
         }
 
         const availableDriver = await this.driverRepository.findOne({ where: { is_available: true } });
-        if (!availableDriver) {
-            this.logger.warn(`No available drivers for order ${data.orderId}`);
-            return;
-        }
+        if (!availableDriver) { this.logger.warn(`No available drivers for order ${data.orderId}`); return; }
 
-        // Assign driver
         order.driver_id = availableDriver.id;
         order.updated_at = new Date();
         await this.orderRepository.save(order);
 
-        // Mark driver unavailable
         availableDriver.is_available = false;
         await this.driverRepository.save(availableDriver);
 
-        // Create delivery record (idempotent)
+        // Idempotency: create delivery record only if it doesn't exist
         const existingDelivery = await this.deliveryRepository.findOne({ where: { order_id: order.id } });
         if (!existingDelivery) {
             const delivery = this.deliveryRepository.create({ order_id: order.id, created_at: new Date() });
@@ -182,7 +173,7 @@ export class DeliveryService {
     }
 
     async handleOrderPickedUp(data: OrderPickedUpEvent): Promise<void> {
-        // Order status is set directly in markAsPickedUp — nothing to do here
-        this.logger.log(`Received order.picked.up event for order: ${data.orderId} — no-op`);
+        // Order status is already set to picked_up in markAsPickedUp synchronously
+        this.logger.log(`Received order.picked.up event for order: ${data.orderId} — no action needed`);
     }
 }
