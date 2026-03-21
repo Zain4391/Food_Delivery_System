@@ -38,6 +38,9 @@ export class DriverStrategy extends PassportStrategy(Strategy, 'jwt-driver') {
             role: driver.role,
             userType: 'driver',
             profile_img_url: driver.profile_image_url ?? undefined,
+            is_available: driver.is_available,
+            vehicle_type: driver.vehicle_type,
+            phone: driver.phone,
         };
     }
 }

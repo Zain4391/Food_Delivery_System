@@ -15,4 +15,8 @@ export interface AuthenticatedUser {
     role: ROLES;
     userType: 'customer' | 'driver' | 'admin';
     profile_img_url?: string;
+    // Driver-specific — only set when userType === 'driver'
+    is_available?: boolean;
+    vehicle_type?: string;
+    phone?: string;
 }
