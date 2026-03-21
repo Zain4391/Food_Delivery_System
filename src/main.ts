@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filter/http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
-import { getRabbitMQConfig, MICROSERVICE_CONFIGS } from './rabbitmq/rabbitmq.config';
+import { getRabbitMQConfig, QUEUE_CONFIGS } from './rabbitmq/rabbitmq.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,11 +14,10 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Authorization',
   });
 
-  // Register one microservice connection per (queue, routingKey) pair.
-  // amqplib requires routingKey to be a single string — arrays crash at queue bind.
-  for (const config of MICROSERVICE_CONFIGS) {
-    app.connectMicroservice(getRabbitMQConfig(config.queue, config.routingKey));
-  }
+  // One microservice listener per queue
+  app.connectMicroservice(getRabbitMQConfig(QUEUE_CONFIGS.ORDERS));
+  app.connectMicroservice(getRabbitMQConfig(QUEUE_CONFIGS.RESTAURANTS));
+  app.connectMicroservice(getRabbitMQConfig(QUEUE_CONFIGS.DELIVERY));
 
   app.useGlobalFilters(new GlobalExceptionFilter());
 
