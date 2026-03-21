@@ -38,61 +38,21 @@ export class RestaurantService {
 
     // Menu Items Related
     async findAll(restaurantId: string, query: MenuItemPaginationDTO): Promise<Pagination<MenuItemResponseDTO>> {
-        
-        const restaurant = await this.restaurantRepository.findOne({
-            where: { id: restaurantId } 
-        });
+        const restaurant = await this.restaurantRepository.findOne({ where: { id: restaurantId } });
+        if (!restaurant) throw new RestaurantNotFoundException(restaurantId);
 
-        if (!restaurant) {
-            throw new RestaurantNotFoundException(restaurantId);
-        }
-        
-        const { page, limit, search, category, minPrice, maxPrice, minPrepTime, maxPrepTime, sortBy, sortOrder} = query;
-
+        const { page, limit, search, category, minPrice, maxPrice, minPrepTime, maxPrepTime, sortBy, sortOrder } = query;
         const queryBuilder = this.menuItemRepository.createQueryBuilder('menuItem');
-
         queryBuilder.where("menuItem.restaurant_id = :restaurantId", { restaurantId });
-
-        if (search) {
-            queryBuilder.andWhere(
-                'menuItem.name ILIKE :search OR menuItem.description ILIKE :search',
-                { search: `%${search}%`}
-            )
-        }
-
-        if (category) {
-            queryBuilder.andWhere('menuItem.category = :category', { category });
-        }
-
-        if (minPrice !== undefined) {
-            queryBuilder.andWhere('menuItem.price >= :minPrice', { minPrice });
-        }
-
-        if (maxPrice !== undefined) {
-            queryBuilder.andWhere('menuItem.price <= :maxPrice', { maxPrice });
-        }
-
-        if (minPrepTime !== undefined) {
-            queryBuilder.andWhere('menuItem.preparation_time >= :minPrepTime', { minPrepTime });
-        }
-
-        if (maxPrepTime !== undefined) {
-            queryBuilder.andWhere('menuItem.preparation_time <= :maxPrepTime', { maxPrepTime });
-        }
-
-        if (sortBy && sortOrder) {
-            queryBuilder.orderBy(`menuItem.${sortBy}`, sortOrder);
-        }
-
-        const paginationOption: IPaginationOptions = { page, limit }
-
-        const result = await paginate<MenuItem>(queryBuilder, paginationOption);
-
-        return {
-            items: plainToInstance(MenuItemResponseDTO, result.items),
-            meta: result.meta,
-            links: result.links
-        }
+        if (search) queryBuilder.andWhere('menuItem.name ILIKE :search OR menuItem.description ILIKE :search', { search: `%${search}%` });
+        if (category) queryBuilder.andWhere('menuItem.category = :category', { category });
+        if (minPrice !== undefined) queryBuilder.andWhere('menuItem.price >= :minPrice', { minPrice });
+        if (maxPrice !== undefined) queryBuilder.andWhere('menuItem.price <= :maxPrice', { maxPrice });
+        if (minPrepTime !== undefined) queryBuilder.andWhere('menuItem.preparation_time >= :minPrepTime', { minPrepTime });
+        if (maxPrepTime !== undefined) queryBuilder.andWhere('menuItem.preparation_time <= :maxPrepTime', { maxPrepTime });
+        if (sortBy && sortOrder) queryBuilder.orderBy(`menuItem.${sortBy}`, sortOrder);
+        const result = await paginate<MenuItem>(queryBuilder, { page, limit } as IPaginationOptions);
+        return { items: plainToInstance(MenuItemResponseDTO, result.items), meta: result.meta, links: result.links };
     }
 
     async findById(id: string): Promise<MenuItemResponseDTO> {
@@ -105,8 +65,7 @@ export class RestaurantService {
         const restaurant = await this.restaurantRepository.findOne({ where: { id: restaurantId } });
         if (!restaurant) throw new RestaurantNotFoundException(restaurantId);
         const item = this.menuItemRepository.create({ ...createDto, created_at: new Date() });
-        const savedItem = await this.menuItemRepository.save(item);
-        return new MenuItemResponseDTO(savedItem);
+        return new MenuItemResponseDTO(await this.menuItemRepository.save(item));
     }
 
     async update(id: string, updateDto: UpdateMenuItemDTO): Promise<MenuItemResponseDTO> {
@@ -141,12 +100,10 @@ export class RestaurantService {
     async findAvailableItems(restaurantId: string, query: MenuItemPaginationDTO): Promise<Pagination<MenuItemResponseDTO>> {
         const restaurant = await this.restaurantRepository.findOne({ where: { id: restaurantId } });
         if (!restaurant) throw new RestaurantNotFoundException(restaurantId);
-
         const { page, limit, search, category, minPrice, maxPrice, minPrepTime, maxPrepTime, sortBy, sortOrder } = query;
         const queryBuilder = this.menuItemRepository.createQueryBuilder('menuItem');
         queryBuilder.where('menuItem.restaurant_id = :restaurantId', { restaurantId });
         queryBuilder.andWhere('menuItem.is_available = :isAvailable', { isAvailable: true });
-
         if (search) queryBuilder.andWhere('(menuItem.name ILIKE :search OR menuItem.description ILIKE :search)', { search: `%${search}%` });
         if (category) queryBuilder.andWhere('menuItem.category = :category', { category });
         if (minPrice !== undefined) queryBuilder.andWhere('menuItem.price >= :minPrice', { minPrice });
@@ -154,13 +111,8 @@ export class RestaurantService {
         if (minPrepTime !== undefined) queryBuilder.andWhere('menuItem.preparation_time >= :minPrepTime', { minPrepTime });
         if (maxPrepTime !== undefined) queryBuilder.andWhere('menuItem.preparation_time <= :maxPrepTime', { maxPrepTime });
         if (sortBy && sortOrder) queryBuilder.orderBy(`menuItem.${sortBy}`, sortOrder);
-
-        const result = await paginate<MenuItem>(queryBuilder, { page, limit });
-        return {
-            items: plainToInstance(MenuItemResponseDTO, result.items),
-            meta: result.meta,
-            links: result.links
-        };
+        const result = await paginate<MenuItem>(queryBuilder, { page, limit } as IPaginationOptions);
+        return { items: plainToInstance(MenuItemResponseDTO, result.items), meta: result.meta, links: result.links };
     }
 
     async uploadMenuItemImage(id: string, file: Express.Multer.File): Promise<MenuItemResponseDTO> {
@@ -221,12 +173,8 @@ export class RestaurantService {
         if (is_active !== undefined) queryBuilder.andWhere('restaurant.is_active = :is_active', { is_active });
         if (sortBy && sortOrder) queryBuilder.orderBy(`restaurant.${sortBy}`, sortOrder);
         else queryBuilder.orderBy('restaurant.created_at', 'DESC');
-        const result = await paginate<Restaurant>(queryBuilder, { page, limit });
-        return {
-            items: plainToInstance(RestaurantResponseDTO, result.items),
-            meta: result.meta,
-            links: result.links
-        };
+        const result = await paginate<Restaurant>(queryBuilder, { page, limit } as IPaginationOptions);
+        return { items: plainToInstance(RestaurantResponseDTO, result.items), meta: result.meta, links: result.links };
     }
 
     async findRestaurantById(id: string): Promise<RestaurantResponseDTO> {
@@ -279,11 +227,19 @@ export class RestaurantService {
 
     async handleOrderPlaced(data: OrderPlacementEvent): Promise<void> {
         this.logger.log(`Restaurant received order.placed event for order: ${data.orderId}`);
+
         const order = await this.orderRepository.findOne({ where: { id: data.orderId } });
         if (!order) {
             this.logger.error(`Order ${data.orderId} not found`);
             return;
         }
+
+        // Idempotency guard: only confirm if still pending
+        if (order.status !== OrderStatus.PENDING) {
+            this.logger.warn(`Order ${data.orderId} is already ${order.status} — skipping order.placed handler`);
+            return;
+        }
+
         const confirmedEvent = new OrderConfirmedEvent({
             orderId: order.id,
             restaurantId: order.restaurant_id,

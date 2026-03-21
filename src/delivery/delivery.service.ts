@@ -9,8 +9,8 @@ import { DeliveryResponseDTO } from "./dtos/delivery-response.dto";
 import { DeliveryPaginationDTO } from "./dtos/delivery-pagination.dto";
 import { IPaginationOptions, paginate, Pagination } from "nestjs-typeorm-paginate";
 import { plainToInstance } from "class-transformer";
-import { 
-    DeliveryNotFoundException, 
+import {
+    DeliveryNotFoundException,
     DeliveryAlreadyExistsException,
     DeliveryAlreadyPickedUpException,
     DeliveryAlreadyDeliveredException,
@@ -45,27 +45,19 @@ export class DeliveryService {
         const sortBy = query.sortBy;
         const sortOrder = query.sortOrder ?? 'DESC';
         const order_id = query.order_id;
-
         const queryBuilder = this.deliveryRepository.createQueryBuilder('delivery');
         if (order_id) queryBuilder.where('delivery.order_id = :order_id', { order_id });
         if (sortBy) queryBuilder.orderBy(`delivery.${sortBy}`, sortOrder);
         else queryBuilder.orderBy('delivery.created_at', 'DESC');
-
         const result = await paginate<Delivery>(queryBuilder, { page, limit } as IPaginationOptions);
-        return {
-            items: plainToInstance(DeliveryResponseDTO, result.items),
-            meta: result.meta,
-            links: result.links
-        };
+        return { items: plainToInstance(DeliveryResponseDTO, result.items), meta: result.meta, links: result.links };
     }
 
     async create(createDto: CreateDeliveryDTO): Promise<DeliveryResponseDTO> {
         const order = await this.orderRepository.findOne({ where: { id: createDto.order_id } });
         if (!order) throw new OrderNotFoundException(createDto.order_id);
-
         const existingDelivery = await this.deliveryRepository.findOne({ where: { order_id: createDto.order_id } });
         if (existingDelivery) throw new DeliveryAlreadyExistsException(createDto.order_id);
-
         const delivery = this.deliveryRepository.create({ order_id: createDto.order_id, created_at: new Date() });
         return new DeliveryResponseDTO(await this.deliveryRepository.save(delivery));
     }
@@ -100,25 +92,16 @@ export class DeliveryService {
         delivery.updated_at = new Date();
         const savedDelivery = await this.deliveryRepository.save(delivery);
 
-        // Update order status to picked_up immediately
-        const order = await this.orderRepository.findOne({
-            where: { id: savedDelivery.order_id },
-            relations: ['driver']
-        });
+        // Update order status to picked_up immediately — don't rely on event chain
+        const order = await this.orderRepository.findOne({ where: { id: savedDelivery.order_id }, relations: ['driver'] });
         if (order) {
             order.status = OrderStatus.PICKED_UP;
             order.updated_at = new Date();
             await this.orderRepository.save(order);
-
-            const pickupEvent = new OrderPickedUpEvent({
-                orderId: order.id,
-                driverId: order.driver_id,
-                customerId: order.customer_id
-            });
+            const pickupEvent = new OrderPickedUpEvent({ orderId: order.id, driverId: order.driver_id, customerId: order.customer_id });
             this.rabbitMQService.emitEvent('order.picked.up', pickupEvent);
             this.logger.log(`Emitted order.picked.up for order: ${order.id}`);
         }
-
         return new DeliveryResponseDTO(savedDelivery);
     }
 
@@ -132,24 +115,17 @@ export class DeliveryService {
         delivery.updated_at = new Date();
         const savedDelivery = await this.deliveryRepository.save(delivery);
 
-        const order = await this.orderRepository.findOne({
-            where: { id: savedDelivery.order_id },
-            relations: ['driver']
-        });
+        const order = await this.orderRepository.findOne({ where: { id: savedDelivery.order_id }, relations: ['driver'] });
         if (order) {
-            const deliveredEvent = new OrderDeliveredEvent({
-                orderId: order.id,
-                driverId: order.driver_id
-            });
+            const deliveredEvent = new OrderDeliveredEvent({ orderId: order.id, driverId: order.driver_id });
             this.rabbitMQService.emitEvent('order.delivered', deliveredEvent);
             this.logger.log(`Emitted order.delivered for order: ${order.id}`);
         }
-
         return new DeliveryResponseDTO(savedDelivery);
     }
 
     async remove(id: string): Promise<string> {
-        const delivery = await this.deliveryRepository.findOne({ where: { id: id } });
+        const delivery = await this.deliveryRepository.findOne({ where: { id } });
         if (!delivery) throw new DeliveryNotFoundException(id);
         await this.deliveryRepository.remove(delivery);
         return `Delivery ${id} removed successfully`;
@@ -160,15 +136,21 @@ export class DeliveryService {
     async handleOrderReady(data: OrderReadyEvent): Promise<void> {
         this.logger.log(`Received order.ready event for order: ${data.orderId}`);
 
-        const availableDriver = await this.driverRepository.findOne({ where: { is_available: true } });
-        if (!availableDriver) {
-            this.logger.warn(`No available drivers for order ${data.orderId}`);
-            return;
-        }
-
         const order = await this.orderRepository.findOne({ where: { id: data.orderId } });
         if (!order) {
             this.logger.error(`Order ${data.orderId} not found`);
+            return;
+        }
+
+        // Idempotency guard: skip if driver already assigned
+        if (order.driver_id) {
+            this.logger.warn(`Order ${data.orderId} already has driver ${order.driver_id} — skipping order.ready handler`);
+            return;
+        }
+
+        const availableDriver = await this.driverRepository.findOne({ where: { is_available: true } });
+        if (!availableDriver) {
+            this.logger.warn(`No available drivers for order ${data.orderId}`);
             return;
         }
 
@@ -181,18 +163,14 @@ export class DeliveryService {
         availableDriver.is_available = false;
         await this.driverRepository.save(availableDriver);
 
-        // Create delivery record so the driver can act on it
+        // Create delivery record (idempotent)
         const existingDelivery = await this.deliveryRepository.findOne({ where: { order_id: order.id } });
         if (!existingDelivery) {
-            const delivery = this.deliveryRepository.create({
-                order_id: order.id,
-                created_at: new Date()
-            });
+            const delivery = this.deliveryRepository.create({ order_id: order.id, created_at: new Date() });
             await this.deliveryRepository.save(delivery);
             this.logger.log(`Created delivery record for order: ${order.id}`);
         }
 
-        // Emit driver.assigned event
         const assignedEvent = new DriverAssignedEvent({
             orderId: order.id,
             driverId: availableDriver.id,
@@ -204,7 +182,7 @@ export class DeliveryService {
     }
 
     async handleOrderPickedUp(data: OrderPickedUpEvent): Promise<void> {
-        this.logger.log(`Received order.picked.up event for order: ${data.orderId}`);
-        // Status is already set to picked_up in markAsPickedUp — nothing more to do here
+        // Order status is set directly in markAsPickedUp — nothing to do here
+        this.logger.log(`Received order.picked.up event for order: ${data.orderId} — no-op`);
     }
 }
