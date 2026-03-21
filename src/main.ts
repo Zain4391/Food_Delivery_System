@@ -2,10 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filter/http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
-import { getRabbitMQConfig, QUEUE_CONFIGS } from './rabbitmq/rabbitmq.config';
+import { getRabbitMQConfig, MICROSERVICE_CONFIGS } from './rabbitmq/rabbitmq.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
   app.enableCors({
     origin: 'http://localhost:4200',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -13,24 +14,23 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Authorization',
   });
 
-  app.connectMicroservice(getRabbitMQConfig(QUEUE_CONFIGS.ORDERS));
-  app.connectMicroservice(getRabbitMQConfig(QUEUE_CONFIGS.RESTAURANTS));
-  app.connectMicroservice(getRabbitMQConfig(QUEUE_CONFIGS.DELIVERY));
+  // Register one microservice connection per (queue, routingKey) pair.
+  // amqplib requires routingKey to be a single string — arrays crash at queue bind.
+  for (const config of MICROSERVICE_CONFIGS) {
+    app.connectMicroservice(getRabbitMQConfig(config.queue, config.routingKey));
+  }
 
-
-  // Global exception filter registration
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  // Validation for DTOs
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
-    transform: true
+    transform: true,
   }));
 
   await app.startAllMicroservices();
-  console.log("RabbitMQ microservices started");
-  
+  console.log('RabbitMQ microservices started');
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
