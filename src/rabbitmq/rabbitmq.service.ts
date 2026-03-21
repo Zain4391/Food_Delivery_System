@@ -2,30 +2,30 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
 
-// Route each event pattern to the queue whose microservice listener
-// has the matching @EventPattern() decorator.
-const EVENT_QUEUE_MAP: Record<string, string> = {
-    'order.placed':   process.env.RABBITMQ_RESTAURANTS_QUEUE || 'restaurants-service-queue',
-    'order.confirmed':process.env.RABBITMQ_ORDERS_QUEUE      || 'order-service-queue',
-    'order.ready':    process.env.RABBITMQ_DELIVERY_QUEUE    || 'delivery-service-queue',
-    'driver.assigned':process.env.RABBITMQ_ORDERS_QUEUE      || 'order-service-queue',
-    'order.picked.up':process.env.RABBITMQ_DELIVERY_QUEUE    || 'delivery-service-queue',
-    'order.delivered':process.env.RABBITMQ_ORDERS_QUEUE      || 'order-service-queue',
-};
-
 @Injectable()
 export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     private clients: Map<string, ClientProxy> = new Map();
+    private eventQueueMap: Record<string, string> = {};
 
     constructor(private configService: ConfigService) {
         const url = this.configService.getOrThrow<string>('RABBITMQ_URL');
-        const queues = [
-            this.configService.get('RABBITMQ_ORDERS_QUEUE')      || 'order-service-queue',
-            this.configService.get('RABBITMQ_RESTAURANTS_QUEUE') || 'restaurants-service-queue',
-            this.configService.get('RABBITMQ_DELIVERY_QUEUE')    || 'delivery-service-queue',
-        ];
 
-        for (const queue of queues) {
+        const ordersQueue      = this.configService.get('RABBITMQ_ORDERS_QUEUE')      || 'order-service-queue';
+        const restaurantsQueue = this.configService.get('RABBITMQ_RESTAURANTS_QUEUE') || 'restaurants-service-queue';
+        const deliveryQueue    = this.configService.get('RABBITMQ_DELIVERY_QUEUE')    || 'delivery-service-queue';
+
+        // Build the event -> queue routing map using resolved config values
+        this.eventQueueMap = {
+            'order.placed':    restaurantsQueue,
+            'order.confirmed': ordersQueue,
+            'order.ready':     deliveryQueue,
+            'driver.assigned': ordersQueue,
+            'order.picked.up': deliveryQueue,
+            'order.delivered': ordersQueue,
+        };
+
+        // Create one client per queue
+        for (const queue of [ordersQueue, restaurantsQueue, deliveryQueue]) {
             const client = ClientProxyFactory.create({
                 transport: Transport.RMQ,
                 options: {
@@ -52,7 +52,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
 
     emitEvent(routingKey: string, data: unknown) {
-        const queue = EVENT_QUEUE_MAP[routingKey];
+        const queue = this.eventQueueMap[routingKey];
         if (!queue) {
             console.warn(`No queue mapped for event: ${routingKey}`);
             return;
