@@ -6,7 +6,6 @@ import * as bcrypt from "bcrypt";
 import { DriverPaginationDTO } from "./dtos/driver-pagination.dto";
 import { paginate, Pagination, IPaginationOptions } from "nestjs-typeorm-paginate";
 import { DriverResponseDTO } from "src/auth/dto/driver-response-dto";
-import { plainToInstance } from "class-transformer";
 import { DriverEmailNotFoundException, DriverNotFoundException, PasswordsNotMatchException, FileUploadException, InvalidFileTypeException } from "src/common/exceptions/driver.exceptions";
 import { UpdateDriverDTO } from "./dtos/update-driver-dto";
 import { ForgotPasswordDTO } from "./dtos/forgot-password.dto";
@@ -48,7 +47,9 @@ export class DriverService {
         const result = await paginate<DeliveryDriver>(queryBuilder, paginationOptions);
 
         return {
-            items: plainToInstance(DriverResponseDTO, result.items),
+            // Use constructor mapping instead of plainToInstance — plainToInstance
+            // bypasses the constructor and breaks the profile_image_url -> profile_img_url mapping
+            items: result.items.map(item => new DriverResponseDTO(item)),
             meta: result.meta,
             links: result.links
         };

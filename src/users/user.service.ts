@@ -6,7 +6,6 @@ import * as bcrypt from "bcrypt";
 import { CustomerPaginationDTO } from "./dtos/customer-pagination.dto";
 import { paginate, Pagination, IPaginationOptions } from "nestjs-typeorm-paginate";
 import { CustomerResponseDTO } from "src/auth/dto/customer-response-dto";
-import { plainToInstance } from "class-transformer";
 import { CustomerEmailNotFoundException, CustomerNotFoundException, PasswordsNotMatchException, FileUploadException, InvalidFileTypeException } from "src/common/exceptions/customer.exceptions";
 import { UpdateCustomerDTO } from "./dtos/update-customer.dto";
 import { ForgotPasswordDTO } from "./dtos/forgot-password.dto";
@@ -47,7 +46,9 @@ export class CustomerService {
         const result = await paginate<Customer>(queryBuilder, paginationOptions);
 
         return {
-            items: plainToInstance(CustomerResponseDTO, result.items),
+            // Use constructor mapping instead of plainToInstance — plainToInstance
+            // bypasses the constructor and breaks the profile_image_url -> profile_img_url mapping
+            items: result.items.map(item => new CustomerResponseDTO(item)),
             meta: result.meta,
             links: result.links
         };
