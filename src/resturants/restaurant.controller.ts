@@ -57,7 +57,7 @@ export class RestaurantController {
     }
 
     @Delete("delete/:id")
-    @UseGuards(RolesGuard, JwtAdminGuard)
+    @UseGuards(JwtAdminGuard, RolesGuard)
     @Roles(ROLES.ADMIN)
     async removeRestaurant(@Param("id", UuidValidationPipe) id: string) {
         const message = await this.restaurantService.removeRestaurant(id);
