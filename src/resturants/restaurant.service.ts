@@ -64,7 +64,7 @@ export class RestaurantService {
     async create(restaurantId: string, createDto: CreateMenuItemDTO): Promise<MenuItemResponseDTO> {
         const restaurant = await this.restaurantRepository.findOne({ where: { id: restaurantId } });
         if (!restaurant) throw new RestaurantNotFoundException(restaurantId);
-        const item = this.menuItemRepository.create({ ...createDto, created_at: new Date() });
+        const item = this.menuItemRepository.create({ ...createDto, restaurant_id: restaurantId, created_at: new Date() });
         return new MenuItemResponseDTO(await this.menuItemRepository.save(item));
     }
 
